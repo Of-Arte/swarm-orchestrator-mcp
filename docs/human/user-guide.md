@@ -9,6 +9,7 @@ Complete guide to using Project Swarm's features for code search, analysis, and 
 3. [Deep Code Analysis](#deep-code-analysis)
 4. [Indexing Best Practices](#indexing-best-practices)
 5. [Provider Configuration](#provider-configuration)
+6. [Algorithm Workers](workers.md) - Detailed worker documentation
 
 ---
 

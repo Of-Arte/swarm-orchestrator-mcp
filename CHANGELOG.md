@@ -17,6 +17,12 @@ All notable changes to Project Swarm will be documented in this file.
   - Updated `swarm://docs/architecture` to point to `docs/human/architecture.md`
   - Kept `swarm://docs/ai` (legacy ai.txt) for backwards compatibility
 
+### Removed
+- **Temporary Test Files**: Removed `test_symbol_detection.py` and `test_active_governance.py`
+  - These were one-time verification scripts created during Active Governance implementation
+  - Functionality already verified and working in production
+  - Proper unit tests exist in `tests/` directory
+
 ---
 
 ## [3.0.1] - 2026-01-19

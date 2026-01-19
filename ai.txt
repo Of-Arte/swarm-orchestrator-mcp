@@ -8,49 +8,44 @@ This file provides decision heuristics for AI agents using Swarm MCP tools along
 
 | Task | Recommended Tool | Why |
 |------|------------------|-----|
-| Exact symbol: `UserModel`, `calculate_tax` | `grep_search` or `search_codebase(keyword_only=True)` | Fast (~1-10ms) |
-| Regex pattern: `def test_.*` | `grep_search` (built-in) | Regex support |
-| Conceptual: "authentication logic" | `search_codebase` (Swarm) | Semantic understanding |
-| Deep analysis: call graphs, dependencies | `retrieve_context` (Swarm) | AST + PageRank |
+| Exact symbol: `UserModel` | `search_codebase(keyword_only=True)` | Auto-Pilot optimization (~1ms) |
+| Conceptual: "auth logic" | `search_codebase` | Semantic understanding |
+| Regex pattern | `grep_search` | Regex support only |
+| Deep analysis | `retrieve_context` | AST + PageRank |
 
 ### Code Modification
 
 | Task | Recommended Tool | Why |
 |------|------------------|-----|
-| Simple edits | `replace_file_content` (built-in) | Direct control |
-| Refactoring with conflict detection | `process_task` (Swarm) | OCC Validator |
-| Debugging failing tests | `process_task` (Swarm) | Ochiai SBFL |
-| Formal verification | `process_task` (Swarm) | Z3 Verifier |
+| Simple edits | `replace_file_content` | Direct control (Verify first!) |
+| Refactoring | `process_task` | OCC Conflict Detection |
+| Debugging | `process_task` | Ochiai SBFL |
+| Verification | `process_task` | Z3 Verifier |
 
 ### File Operations
 
 | Task | Recommended Tool |
 |------|------------------|
-| View file contents | `view_file` (built-in) |
-| Find files by name | `find_by_name` (built-in) |
-| List directory | `list_dir` (built-in) |
-| Index for semantic search | `index_codebase` (Swarm) |
+| View file contents | `view_file` (Verify content before editing) |
+| Find files | `find_by_name` |
+| Index codebase | `index_codebase` |
 
 ## Decision Flowchart
 
 ```
 Need to find code?
-├─ Know exact symbol name?
-│  └─ YES → grep_search or search_codebase(keyword_only=True)
+├─ Looking for symbols/concepts?
+│  └─ YES → search_codebase (Swarm handles optimization)
 ├─ Need regex pattern?
 │  └─ YES → grep_search
-├─ Searching by concept?
-│  └─ YES → search_codebase (Swarm)
 └─ Need full architecture?
-   └─ YES → retrieve_context (Swarm)
+   └─ YES → retrieve_context
 
 Need to modify code?
-├─ Simple edit, know what to change?
-│  └─ YES → replace_file_content (built-in)
-├─ Complex refactoring?
-│  └─ YES → process_task (Swarm)
-└─ Need debugging help?
-   └─ YES → process_task with "debug" instruction
+├─ Simple edit?
+│  └─ YES → view_file (verify) → replace_file_content
+└─ Complex/Refactor/Debug?
+   └─ YES → process_task (Routes to specialized worker)
 ```
 
 ## Swarm Tool Heuristics

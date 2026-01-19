@@ -74,6 +74,7 @@ process_task("Refactor auth.py to use async/await")
 
 - **[Getting Started](docs/human/getting-started.md)** - Installation & first steps
 - **[User Guide](docs/human/user-guide.md)** - Complete feature walkthrough
+- **[Algorithm Workers](docs/human/workers.md)** - OCC, SBFL, Z3, CRDT, HippoRAG
 - **[Architecture](docs/human/architecture.md)** - System design & components
 - **[API Reference](docs/human/api-reference.md)** - MCP tools & CLI commands
 - **[Configuration](docs/human/configuration.md)** - Environment setup & providers

@@ -211,20 +211,7 @@ pip install coverage>=7.0
 
 **Use case:** Automated fault localization with `process_task("Debug...")`
 
-### ChromaDB (Vector Storage)
 
-**Note:** Disabled by default for lightweight deployment.
-
-```bash
-# Uncomment in requirements.txt
-# chromadb>=0.4.0
-
-pip install chromadb
-```
-
-**Trade-off:**
-- Enabled: Scalable persistent storage, heavy resource usage
-- Disabled (default): Lightweight JSON cache, suitable for most projects
 
 ---
 

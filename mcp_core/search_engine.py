@@ -263,7 +263,6 @@ class HybridSearch:
     """
     Performs hybrid search combining semantic similarity with exact text matching.
     
-    This matches the legacy Node.js hybrid-search.js capabilities:
     1. Semantic similarity with configurable weight
     2. Exact match boost for literal query matches
     3. Partial word matching for multi-word queries

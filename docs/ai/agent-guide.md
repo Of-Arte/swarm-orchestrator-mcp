@@ -300,6 +300,158 @@ Memory:           Memory MCP → Remember decisions
 
 ---
 
+## Workflow Patterns
+
+### Pattern 1: Prefer Swarm Search
+
+When searching for code, use Swarm's `search_codebase` instead of raw grep/ripgrep tools.
+
+**❌ Don't:**
+```python
+# Using raw grep bypasses Swarm optimization
+grep_search(query="chromadb", path="./")
+```
+
+**✅ Do:**
+```python
+# Swarm provides Auto-Pilot, context, and escalation hints
+search_codebase("chromadb", keyword_only=True)  # ~1ms vs grep
+```
+
+**Why:**
+- **Auto-Pilot optimization**: Symbol searches are 200x faster (~1ms vs ~200ms)
+- **Rich context**: Results include line numbers, file paths, and code snippets
+- **Escalation hints**: Automatic suggestions when results are sparse
+- **Consistency**: Uses the same search index for all queries
+
+**When to use grep instead:**
+- Searching non-code files (`.md`, `.txt`, `.json`)
+- Regex patterns not supported by Swarm
+- Files excluded from Swarm index
+
+---
+
+### Pattern 2: Verify Before Edit
+
+Always view file content before attempting edit operations to avoid "target not found" errors.
+
+**❌ Don't:**
+```python
+# Editing based on quoted/remembered content
+replace_file_content(
+    target_file="config.md",
+    target_content="# chromadb>=0.4.0",  # May not match actual file!
+    replacement_content="",
+    start_line=214,
+    end_line=221
+)
+# → Error: target content not found in file
+```
+
+**✅ Do:**
+```python
+# 1. Search to locate
+results = search_codebase("chromadb", keyword_only=True)
+
+# 2. View to verify exact content (including whitespace)
+view_file("V:/Projects/Servers/swarm/docs/human/configuration.md", 
+          start_line=210, end_line=230)
+
+# 3. Edit with EXACT verified content
+replace_file_content(
+    target_file="config.md",
+    target_content="### ChromaDB (Vector Storage)\n\n**Note:** Disabled...",  # Exact match
+    replacement_content="",
+    start_line=214,
+    end_line=228
+)
+# → Success
+```
+
+**Why:**
+- **Whitespace matters**: Spaces, tabs, line endings must match exactly
+- **Content changes**: Files may have been updated since quoted
+- **Truncation**: Quoted content may be incomplete
+- **Confidence**: Verification prevents cascading errors
+
+**Verification checklist:**
+1. ✅ View target file section
+2. ✅ Copy exact content (including whitespace)
+3. ✅ Verify line ranges match
+4. ✅ Execute edit
+
+---
+
+### Pattern 3: Search → Escalate
+
+Start with fast search, escalate to deep analysis when needed.
+
+**Flow:**
+```python
+# 1. Quick symbol search
+results = search_codebase("UserModel")  # ~1ms
+
+# 2. If results incomplete, try semantic
+if len(results) < 3:
+    results = search_codebase("user model authentication")  # ~240ms
+
+# 3. If still sparse, escalate to HippoRAG
+if "No results" in results:
+    context = retrieve_context("user authentication models")  # ~500ms-2s
+```
+
+**Swarm helps:** Provides escalation hints automatically in search results.
+
+---
+
+### Anti-Patterns
+
+#### ❌ Anti-Pattern 1: Manual Keyword Optimization
+
+```python
+# Unnecessary - Auto-Pilot handles this
+search_codebase("UserModel", keyword_only=True)
+```
+
+**Fix:**
+```python
+# Let Auto-Pilot optimize
+search_codebase("UserModel")
+```
+
+---
+
+#### ❌ Anti-Pattern 2: Editing Without Context
+
+```python
+# Risky - file may have changed
+replace_file_content(target_content="<remembered content>", ...)
+```
+
+**Fix:**
+```python
+# Always verify first
+view_file("target.py", start_line=50, end_line=100)
+# Then edit with exact content
+```
+
+---
+
+#### ❌ Anti-Pattern 3: Vague Task Instructions
+
+```python
+process_task("fix it")  # Rejected: too vague
+```
+
+**Fix:**
+```python
+process_task("Refactor auth.py to use async/await")  # Specific
+```
+
+---
+
+
+
 ## Advanced Features
 
 ### Custom top_k
