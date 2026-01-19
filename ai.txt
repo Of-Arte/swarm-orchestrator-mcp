@@ -1,0 +1,110 @@
+# AI Agent Guidance - Project Swarm
+
+This file provides decision heuristics for AI agents using Swarm MCP tools alongside Antigravity's built-in tools.
+
+## Tool Selection
+
+### Code Search
+
+| Task | Recommended Tool | Why |
+|------|------------------|-----|
+| Exact symbol: `UserModel`, `calculate_tax` | `grep_search` or `search_codebase(keyword_only=True)` | Fast (~1-10ms) |
+| Regex pattern: `def test_.*` | `grep_search` (built-in) | Regex support |
+| Conceptual: "authentication logic" | `search_codebase` (Swarm) | Semantic understanding |
+| Deep analysis: call graphs, dependencies | `retrieve_context` (Swarm) | AST + PageRank |
+
+### Code Modification
+
+| Task | Recommended Tool | Why |
+|------|------------------|-----|
+| Simple edits | `replace_file_content` (built-in) | Direct control |
+| Refactoring with conflict detection | `process_task` (Swarm) | OCC Validator |
+| Debugging failing tests | `process_task` (Swarm) | Ochiai SBFL |
+| Formal verification | `process_task` (Swarm) | Z3 Verifier |
+
+### File Operations
+
+| Task | Recommended Tool |
+|------|------------------|
+| View file contents | `view_file` (built-in) |
+| Find files by name | `find_by_name` (built-in) |
+| List directory | `list_dir` (built-in) |
+| Index for semantic search | `index_codebase` (Swarm) |
+
+## Decision Flowchart
+
+```
+Need to find code?
+├─ Know exact symbol name?
+│  └─ YES → grep_search or search_codebase(keyword_only=True)
+├─ Need regex pattern?
+│  └─ YES → grep_search
+├─ Searching by concept?
+│  └─ YES → search_codebase (Swarm)
+└─ Need full architecture?
+   └─ YES → retrieve_context (Swarm)
+
+Need to modify code?
+├─ Simple edit, know what to change?
+│  └─ YES → replace_file_content (built-in)
+├─ Complex refactoring?
+│  └─ YES → process_task (Swarm)
+└─ Need debugging help?
+   └─ YES → process_task with "debug" instruction
+```
+
+## Swarm Tool Heuristics
+
+### search_codebase
+- `keyword_only=True`: ~1ms, exact matches
+- Default (semantic): ~240ms, conceptual understanding
+- Use keyword for: symbols, function names, class names
+- Use semantic for: "error handling", "authentication flow"
+- **NEW:** Runtime hints auto-suggest keyword_only when symbol detected
+
+### index_codebase
+- Run once on first setup
+- Re-index after >10 new files
+- Providers: auto (recommended), gemini, openai, local
+
+### retrieve_context
+- Slower (~500ms-2s) but deeper than search
+- Use when search results are incomplete
+- Good for: architecture analysis, dependency graphs
+
+### process_task
+- Routes to specialized algorithms automatically:
+  - "refactor" → OCC (conflict detection)
+  - "debug" → SBFL (fault localization)
+  - "verify" → Z3 (formal verification)
+  - "merge" → CRDT (collaborative editing)
+- Best practice: be specific, include context
+
+## Multi-Tool Workflows
+
+### Discovery → Analysis → Modification
+```
+1. grep_search("auth")           # Quick overview
+2. search_codebase("auth logic") # Semantic discovery
+3. retrieve_context("auth flow") # Deep analysis
+4. process_task("Refactor...")   # Modification with algorithms
+```
+
+### Debugging Workflow
+```
+1. Run tests → identify failure
+2. process_task("Debug test_login failure in test_auth.py")
+3. Swarm uses Ochiai SBFL to find suspicious lines
+4. Fix identified code
+5. Re-run tests to verify
+```
+
+## Performance Reference
+
+| Tool | Speed | Best For |
+|------|-------|----------|
+| grep_search | ~10-50ms | Exact text, regex |
+| search_codebase (keyword) | ~1ms | Indexed symbols |
+| search_codebase (semantic) | ~240ms | Concepts |
+| retrieve_context | ~500ms-2s | Architecture |
+| process_task | ~1-30s | Modifications |

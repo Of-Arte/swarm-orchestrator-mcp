@@ -15,6 +15,8 @@ from mcp_core.orchestrator_loop import Orchestrator
 from mcp_core.swarm_schemas import Task
 from mcp_core.search_engine import CodebaseIndexer, HybridSearch, IndexConfig, get_embedding_provider
 
+from pathlib import Path
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,6 +27,79 @@ mcp = FastMCP("Swarm Orchestrator v3.0")
 # Initialize orchestrator (lazy)
 _orchestrator: Optional[Orchestrator] = None
 _indexer: Optional[CodebaseIndexer] = None
+
+
+# ============================================================================
+# MCP Resources - Agent Documentation
+# ============================================================================
+# Note: These paths resolve relative to the Swarm server's location,
+# NOT the agent's working directory. Resources are served by the MCP server.
+
+_SERVER_DIR = Path(__file__).parent
+
+# Legacy resource (kept for backwards compatibility)
+@mcp.resource("swarm://docs/ai")
+def get_agent_guidance() -> str:
+    """Agent guidance for cross-tool navigation and decision heuristics (legacy)."""
+    return (_SERVER_DIR / "ai.txt").read_text()
+
+# Comprehensive AI agent documentation
+@mcp.resource("swarm://docs/ai/guide")
+def get_ai_agent_guide() -> str:
+    """Comprehensive AI agent guide with decision trees and workflows."""
+    return (_SERVER_DIR / "docs" / "ai" / "agent-guide.md").read_text()
+
+@mcp.resource("swarm://docs/ai/tools")
+def get_ai_tool_reference() -> str:
+    """Detailed AI tool specifications and validation rules."""
+    return (_SERVER_DIR / "docs" / "ai" / "tool-reference.md").read_text()
+
+@mcp.resource("swarm://docs/ai/examples")
+def get_ai_examples() -> str:
+    """Common AI agent workflow examples."""
+    return (_SERVER_DIR / "docs" / "ai" / "examples.md").read_text()
+
+# Human documentation
+@mcp.resource("swarm://docs/architecture")
+def get_architecture() -> str:
+    """Project architecture and component overview."""
+    return (_SERVER_DIR / "docs" / "human" / "architecture.md").read_text()
+
+@mcp.resource("swarm://docs/getting-started")
+def get_getting_started() -> str:
+    """Installation and first steps guide."""
+    return (_SERVER_DIR / "docs" / "human" / "getting-started.md").read_text()
+
+@mcp.resource("swarm://docs/user-guide")
+def get_user_guide() -> str:
+    """Complete feature walkthrough and best practices."""
+    return (_SERVER_DIR / "docs" / "human" / "user-guide.md").read_text()
+
+@mcp.resource("swarm://docs/api-reference")
+def get_api_reference() -> str:
+    """MCP tools and CLI commands reference."""
+    return (_SERVER_DIR / "docs" / "human" / "api-reference.md").read_text()
+
+@mcp.resource("swarm://docs/configuration")
+def get_configuration() -> str:
+    """Environment setup and provider configuration."""
+    return (_SERVER_DIR / "docs" / "human" / "configuration.md").read_text()
+
+@mcp.resource("swarm://docs/performance")
+def get_performance() -> str:
+    """Benchmarks and optimization strategies."""
+    return (_SERVER_DIR / "docs" / "human" / "performance.md").read_text()
+
+@mcp.resource("swarm://docs/changelog")
+def get_changelog() -> str:
+    """Version history and release notes."""
+    return (_SERVER_DIR / "CHANGELOG.md").read_text()
+
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
 
 
 def get_orchestrator() -> Orchestrator:
@@ -52,35 +127,86 @@ def process_task(instruction: str) -> str:
     """
     Create and process a task in the Swarm orchestrator using algorithmic workers.
     
+    **Task Routing (automatic based on instruction):**
+    
+    Your instruction triggers specialized algorithm workers:
+    - "refactor..." → OCC Validator (conflict detection + resolution)
+    - "debug..." / "why is failing..." → Ochiai SBFL (fault localization)
+    - "verify..." / "prove..." → Z3 Verifier (formal verification)
+    - "merge..." / "combine..." → CRDT Merger (collaborative editing)
+    - "analyze..." / "understand..." →HippoRAG (deep context)
+    
+    **Best Practices for Instructions:**
+    
+    ✅ Be specific:
+    - Good: "Refactor auth.py to use async/await"
+    - Bad: "fix auth"
+    
+    ✅ Include context:
+    - Good: "Debug login failure - tests in test_auth.py are failing"
+    - Bad: "login broken"
+    
+    ✅ One concern per task:
+    - Good: "Verify calculate_tax never returns negative values"
+    - Bad: "Fix everything in billing module"
+    
     **When to use:**
-    - Requesting code analysis, refactoring, or modifications
-    - Tasks requiring Swarm's algorithmic capabilities (HippoRAG, SBFL, CRDT, etc.)
+    - Code analysis, refactoring, or modifications
+    - Tasks requiring algorithmic capabilities (SBFL, Z3, CRDT, OCC)
     - Complex multi-step software engineering workflows
-    - When you need Swarm's blackboard state management
+    - Blackboard state management for task tracking
     
     **When NOT to use:**
-    - Simple code search (use search_codebase instead)
-    - Running commands in containers (use Docker MCP tools)
-    - File system operations (use filesystem MCP tools)
-    - Git operations (use GitHub/Git MCP tools)
+    - Simple code search (use search_codebase)
+    - Running commands (use Docker MCP)
+    - File operations (use filesystem MCP)
+    - Git operations (use GitHub MCP)
+    - Quick questions (ask directly)
+    
+    **Performance:**
+    - Varies by algorithm: ~1s-30s depending on task complexity
+    - Blackboard state persists between calls
+    - Check progress with get_status()
     
     **Works well with:**
-    - Docker MCP: Execute generated code in isolated environments
-    - GitHub MCP: Apply Swarm changes to repositories
-    - Filesystem MCP: Read files before processing
+    - Docker MCP: Process task → test in containers
+    - GitHub MCP: Process task → commit changes
+    - Filesystem MCP: Read files → process task
     
-    **Example:**
+    **Examples:**
     ```
-    process_task("Refactor the authentication module to use async/await")
-    # → Swarm analyzes code, applies algorithmic transformations
+    # Refactoring (triggers OCC conflict detection)
+    process_task("Refactor authentication module to use async/await")
+    
+    # Debugging (triggers Ochiai SBFL)
+    process_task("Debug why test_login fails - find suspicious lines")
+    
+    # Verification (triggers Z3)
+    process_task("Verify get_user() never returns None for valid IDs")
+    
+    # Analysis (triggers HippoRAG)
+    process_task("Analyze the data pipeline and document dependencies")
     ```
     
     Args:
-        instruction: Natural language task description
+        instruction: Natural language task description (specific, with context)
         
     Returns:
         Task ID, status, and initial feedback from Swarm workers
     """
+    
+    # GUARDRAILS: Validate instruction specificity
+    def _validate_instruction(text: str) -> Optional[str]:
+        words = text.strip().split()
+        if len(words) < 3:
+            return "❌ Task Rejected: Instruction too short. Please be specific (e.g., 'Refactor auth.py to use async')."
+        # Can add more heuristics here (e.g. check for common vague words like "fix it", "help")
+        return None
+
+    error = _validate_instruction(instruction)
+    if error:
+        return error
+
     try:
         orch = get_orchestrator()
         
@@ -127,6 +253,10 @@ def get_status() -> str:
     get_status()
     # → Returns list of all tasks with IDs, status (PENDING/COMPLETED), descriptions
     ```
+
+    **Best Practices:**
+    - ⚠️ Do NOT poll this in a loose loop. Use it only when checking specific task progress.
+    - Swarm functions asynchronously; wait a few seconds before checking status after submission.
     
     Returns:
         Formatted list of all tasks with their current status
@@ -149,38 +279,79 @@ def get_status() -> str:
         return f"❌ Error: {str(e)}"
 
 
+def _is_likely_symbol(query: str) -> bool:
+    """
+    Heuristic to detect if query looks like an exact symbol.
+    Used to auto-suggest keyword-only search for better performance.
+    """
+    import re
+    query = query.strip()
+    
+    # Check common symbol patterns
+    patterns = [
+        r'^[A-Z][a-zA-Z0-9]+$',                # CamelCase: UserModel, HttpClient
+        r'^[a-z_][a-z0-9_]+$',                 # snake_case: user_model, calculate_tax
+        r'^[a-z_][a-z0-9_]*\(\)$',            # function(): authenticate(), get_user()
+        r'^\.\w+$',                            # .method: .save, .validate
+        r'^[A-Z][A-Z_0-9]+$',                  # CONSTANTS: MAX_SIZE, API_KEY
+    ]
+    
+    return any(re.match(p, query) for p in patterns)
+
+
 @mcp.tool()
 def search_codebase(query: str, top_k: int = 5, keyword_only: bool = False) -> str:
     """
     Search the codebase using hybrid semantic + keyword search.
     
+    **Search Strategy (auto-suggested):**
+    
+    Use keyword_only=True (⚡ ~1ms) for exact symbols:
+    - Class names: "UserModel", "HttpClient"
+    - Function names: "calculate_tax", "authenticate()"
+    - Variable names: "user_id", "config_path"
+    - Constants: "MAX_SIZE", "API_KEY"
+    
+    Use semantic (default, ~240ms) for concepts:
+    - "authentication logic" → finds OAuth, JWT, sessions
+    - "database pooling" → finds connection managers
+    - "error handling patterns" → finds try/catch, Result types
+    - "user management" → finds profiles, accounts, permissions
+    
+    **Performance:**
+    - Keyword: ~1ms (indexed hash lookup)
+    - Semantic: ~200-300ms (API embedding call)
+    - Trade-off: 200ms for conceptual understanding vs exact matching
+    
     **When to use:**
-    - Finding functions/classes by semantic description (e.g., "authentication logic")
-    - Locating implementation of specific features
-    - Discovering code patterns or similar implementations
-    - Quick lookups before deeper analysis with retrieve_context()
+    - Finding functions/classes by description: "authentication logic"
+    - Locating implementation of features: "payment processing"
+    - Discovering patterns: "error handling"
+    - Quick lookups before retrieve_context()
     
     **When NOT to use:**
-    - Deep architectural analysis (use retrieve_context for AST-based graph reasoning)
+    - Deep architectural analysis (use retrieve_context for AST graphs)
     - File tree navigation (use filesystem MCP tools)
     - Cross-repository search (use GitHub MCP search tools)
-    - Regex-based pattern matching (use grep/ripgrep tools)
+    - Regex patterns (use grep/ripgrep tools)
     
     **Works well with:**
-    - retrieve_context(): Start with search, then deep-dive with HippoRAG
-    - Docker MCP: Search for code, then test in containers
-    - process_task(): Find code to modify, then create Swarm task
+    - retrieve_context(): Search → deep-dive with HippoRAG
+    - process_task(): Find code → refactor with Swarm
+    - Docker MCP: Search → test in containers
     
     **Examples:**
     ```
-    # Semantic search
-    search_codebase("database connection pooling")
+    # Fast keyword search for exact symbols
+    search_codebase("UserModel", keyword_only=True)  # ~1ms
+    search_codebase("calculate_tax", keyword_only=True)  # ~1ms
     
-    # Literal function name search
-    search_codebase("calculate_metrics", keyword_only=True)
+    # Semantic search for concepts
+    search_codebase("authentication logic")  # ~240ms, finds OAuth, JWT
+    search_codebase("database connection pooling")  # understands intent
     
-    # Find all error handlers
-    search_codebase("exception handling", top_k=10)
+    # Get more results
+    search_codebase("error handling", top_k=10)
     ```
     
     Args:
@@ -197,9 +368,35 @@ def search_codebase(query: str, top_k: int = 5, keyword_only: bool = False) -> s
         if not indexer.chunks:
             return "⚠️ No index found. Please run 'index' command first."
         
+        # Check if query looks like a symbol (auto-suggest keyword_only)
+        is_symbol = _is_likely_symbol(query)
+        hint_message = ""
+        
+        # ACTIVE GOVERNANCE: Auto-Pilot
+        # If it looks like a symbol and user didn't request keyword_only, try keyword search first.
+        if is_symbol and not keyword_only:
+            logger.info(f"⚡ Auto-Pilot: Detected symbol '{query}'. Attempting keyword search optimization...")
+            searcher = HybridSearch(indexer, None) # No embeddings needed for keyword
+            keyword_results = searcher.keyword_search(query, top_k=top_k)
+            
+            if keyword_results:
+                 # Success! We saved ~240ms. Return these results with a note.
+                 result_lines = [f"⚡ Auto-optimized to keyword search (~1ms) for symbol '{query}'.\nFound {len(keyword_results)} results:\n"]
+                 for i, result in enumerate(keyword_results, 1):
+                    result_lines.append(f"{i}. {result.file_path}:{result.start_line}-{result.end_line}")
+                    result_lines.append(f"   Score: {result.score:.3f}")
+                    result_lines.append(f"   {result.content[:200]}...\n")
+                 return "\n".join(result_lines)
+            
+            # If keyword search failed (no results), we fall through to normal semantic search behavior.
+            # This is the "Safe Fallback" path.
+            logger.info("Auto-Pilot: No keyword matches found. Falling back to semantic search.")
+
+        
         # Get embedding provider for hybrid search (optional)
         embed_provider = None
         if not keyword_only:
+            if not indexer.chunks: pass # Handled above
             has_embeddings = any(c.embedding is not None for c in indexer.chunks)
             if has_embeddings:
                 try:
@@ -216,16 +413,24 @@ def search_codebase(query: str, top_k: int = 5, keyword_only: bool = False) -> s
             results = searcher.search(query, top_k=top_k)
         
         if not results:
-            return "🔍 No results found."
+            if keyword_only:
+                return "🔍 No exact matches found.\n\n💡 Tip: Try semantic search (remove keyword_only=True) to find conceptually similar code."
+            else:
+                return "🔍 No results found.\n\n💡 Tip: Try retrieve_context() for deeper architectural analysis with AST graphs."
         
-        # Format results
+        # Suggest escalation for sparse results
+        escalation_hint = ""
+        if not keyword_only and len(results) <= 2:
+            escalation_hint = f"\n💡 Few results found. Consider retrieve_context() for deeper architectural analysis and call graph relationships.\n"
+        
+        # Format results (prepend hint if symbol was detected)
         result_lines = [f"🔍 Found {len(results)} results for: {query}\n"]
         for i, result in enumerate(results, 1):
             result_lines.append(f"{i}. {result.file_path}:{result.start_line}-{result.end_line}")
             result_lines.append(f"   Score: {result.score:.3f}")
             result_lines.append(f"   {result.content[:200]}...\n")
         
-        return "\n".join(result_lines)
+        return "\n".join(result_lines) + escalation_hint
         
     except Exception as e:
         logger.error(f"Error searching codebase: {e}")
@@ -237,35 +442,74 @@ def index_codebase(path: str = ".", provider: str = "auto") -> str:
     """
     Index the codebase for semantic search capabilities.
     
+    **Provider Selection Guide:**
+    
+    auto (default) - Auto-detects best available provider:
+    - Tries: GEMINI_API_KEY → OPENAI_API_KEY → Local → Keyword-only
+    - Recommended for most cases
+    
+    gemini - Google Gemini API embeddings:
+    - Fast API calls (~2-5s for 150 chunks)
+    - Best quality semantic understanding
+    - Requires: GEMINI_API_KEY environment variable
+    - Cost: Free tier available, then pay-per-use
+    
+    openai - OpenAI API embeddings:
+    - Alternative to Gemini, similar quality
+    - Requires: OPENAI_API_KEY environment variable
+    - Cost: Pay-per-use pricing
+    
+    local - Offline sentence-transformers:
+    - Slower indexing (60-120s for 150 chunks)
+    - No API costs, works offline
+    - Requires: sentence-transformers installed
+    - First run downloads ~400MB model
+    
+    **When to Index:**
+    - ✅ First-time setup
+    - ✅ After adding >10 new files
+    - ✅ After major refactoring
+    - ✅ When switching projects/directories
+    - ❌ Minor edits (index persists)
+    - ❌ Before every search (wasteful)
+    
+    **Performance (150 chunks):**
+    - Gemini/OpenAI: ~45s (API calls)
+    - Local: ~60-120s (CPU-bound)
+    - Keyword-only: ~0.2s (no embeddings)
+    
     **When to use:**
-    - First-time setup before using search_codebase()
-    - After significant code changes to refresh embeddings
-    - When switching to a different codebase/directory
-    - To enable semantic (meaning-based) search vs keyword-only
+    - Enable semantic search (concept-based queries)
+    - Before using search_codebase() for the first time
+    - After significant code changes
     
     **When NOT to use:**
-    - Before every search (index persists until manually refreshed)
-    - On extremely large codebases (>100k files) without filtering
-    - When only keyword search is needed (works without indexing)
-    
-    **Prerequisites:**
-    - Set OPENAI_API_KEY or GEMINI_API_KEY for semantic embeddings
-    - Or use provider="local" for offline embedding models (slower)
+    - Extremely large codebases (>100k files) without filtering
+    - Every time before searching (index is cached)
+    - If only keyword search is sufficient
     
     **Works well with:**
-    - search_codebase(): Required for semantic search capabilities
+    - search_codebase(): Required for semantic search
     - Docker MCP: Index mounted volumes inside containers
+
+    **Included Files:**
+    - Extensions: .py, .js, .ts, .jsx, .tsx, .go, .rs, .java, .cpp, .c
+    - Excludes: node_modules, .git, .venv, dist, build, __pycache__
+    - Note: Non-code files (md, txt, json) are NOT indexed. Use grep_search for those.
     
     **Examples:**
     ```
-    # Index current directory with auto-detected provider
+    # Auto-detect best provider (recommended)
     index_codebase()
     
-    # Index specific path with OpenAI embeddings
-    index_codebase("/path/to/project", provider="openai")
+    # Specific provider for Gemini
+    index_codebase(provider="gemini")
     
-    # Offline indexing (keyword-only if no local model available)
+    # Offline indexing (no API)
     index_codebase(provider="local")
+    
+    # Index specific directory
+    index_codebase("/path/to/project")
     ```
     
     Args:
@@ -305,45 +549,65 @@ def retrieve_context(query: str, top_k: int = 10) -> str:
     """
     Use HippoRAG to retrieve relevant code context via AST graph + PageRank.
     
+    **Escalation Guide (when to upgrade from search_codebase):**
+    
+    Start with search_codebase(), escalate to retrieve_context() when:
+    - ✅ Search results are incomplete or miss related code
+    - ✅ You need to understand call graphs and dependencies
+    - ✅ Refactoring requires full architectural context
+    - ✅ Initial search found something but you need the "full picture"
+    
+    **Performance:**
+    - Time: ~500ms-2s (builds AST graph + PageRank)
+    - vs search_codebase: 5-20x slower but much deeper
+    - Trade-off: Speed for architectural understanding
+    
+    **What it does differently:**
+    - Builds Abstract Syntax Tree (AST) for all Python files
+    - Creates knowledge graph of function calls, imports, classes
+    - Runs Personalized PageRank to find related nodes
+    - Returns results ranked by graph centrality (importance)
+    
     **When to use:**
     - Understanding code architecture and relationships
-    - Finding all code related to a feature (multi-hop reasoning)
+    - Finding ALL code related to a feature (multi-hop reasoning)
     - Analyzing dependencies and call graphs
-    - Deep dives after initial search_codebase() results
-    - Complex refactoring requiring full context understanding
+    - Complex refactoring requiring full context
+    - After search_codebase() for deeper analysis
     
     **When NOT to use:**
-    - Simple function name lookups (use search_codebase with keyword_only=True)
-    - First-time exploration (use search_codebase first, it's faster)
-    - Non-Python codebases (HippoRAG currently Python-only via AST)
+    - Simple function lookups (use search_codebase keyword_only=True)
+    - First-time exploration (search_codebase is faster)
+    - Non-Python codebases (HippoRAG uses Python AST)
+    - Quick questions (overkill for simple queries)
     
-    **Comparison to search_codebase:**
-    - search_codebase: Fast, surface-level, uses embeddings
-    - retrieve_context: Slower, deep analysis, uses AST + graph algorithms
-    - **Best practice:** Search first, retrieve context for deep dives
+    **Comparison Table:**
+    
+    | Aspect | search_codebase | retrieve_context |
+    |--------|-----------------|------------------|
+    | Speed | ~1-240ms | ~500-2000ms |
+    | Depth | Surface-level | Architectural |
+    | Method | Embeddings | AST + Graph |
+    | Languages | All | Python only |
+    | Use for | Quick lookups | Deep analysis |
     
     **Works well with:**
-    - search_codebase(): Find entry points, then retrieve full context
-    - process_task(): Get context, then create informed refactoring tasks
-    - Docker MCP: Retrieve context, test in isolated environment
-    
-    **Technical details:**
-    - Builds Abstract Syntax Tree (AST) for all Python files
-    - Creates knowledge graph of code relationships
-    - Runs Personalized PageRank to find semantically related nodes
-    - Returns ranked results by graph centrality + relevance
+    - search_codebase(): Search → retrieve_context for deep dive
+    - process_task(): Get context → create informed tasks
+    - Docker MCP: Analyze → test in containers
     
     **Examples:**
     ```
-    # Find all authentication-related code
-    retrieve_context("user authentication flow")
+    # Workflow: Start with search, escalate if needed
+    search_codebase("authentication")  # Fast: ~1ms or ~240ms
+    # → Found auth.py but need to see everything it touches
+    retrieve_context("authentication flow")  # Deep: ~1s
     
-    # Understand database layer architecture
+    # Understand architecture
     retrieve_context("database models and migrations", top_k=15)
     
-    # Deep dive after search
-    search_codebase("payment processing")  # Fast overview
-    retrieve_context("payment processing")  # Deep architectural understanding
+    # Find all code involved in a feature
+    retrieve_context("payment processing pipeline")
     ```
     
     Args:

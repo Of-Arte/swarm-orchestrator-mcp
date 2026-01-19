@@ -4,34 +4,6 @@ This directory contains example configurations for connecting to the Swarm MCP s
 
 ## 📁 Configuration Files
 
-### [`claude_desktop_config.json`](./claude_desktop_config.json)
-**Multi-server setup** with Swarm + Docker + GitHub + Filesystem.
-
-**Use case:** Full-featured development environment with:
-- Swarm for code analysis and algorithmic operations
-- Docker for isolated execution
-- GitHub for repository management
-- Filesystem for local file access
-
-**Installation:**
-1. Copy contents to your Claude Desktop config:
-   - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-   - **MacOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - **Linux:** `~/.config/Claude/claude_desktop_config.json`
-
-2. Ensure Swarm Docker container is running:
-   ```bash
-   cd v:\Projects\Servers\swarm
-   docker compose up -d
-   ```
-
-3. Install other MCP servers (optional):
-   ```bash
-   npm install -g @modelcontextprotocol/server-github
-   npm install -g @modelcontextprotocol/server-filesystem
-   ```
-
----
 
 ## � Client Configurations
 
@@ -86,19 +58,11 @@ Many Python-based CLI tools and generic MCP clients use YAML for configuration.
 ## 🎯 Recommended Configurations
 
 ### For Software Development
-Use **`claude_desktop_config.json`** (multi-server) to get:
+Use **`antigravity_config.json`** (multi-server) to get:
 - Code search and refactoring (Swarm)
 - Isolated testing (Docker)
 - Version control (GitHub)
 - Direct file access (Filesystem)
-
-### For Testing Swarm
-Use **`claude_desktop_local.json`** for:
-- Quick iteration on Swarm features
-- No Docker dependency
-- Faster startup time
-- Development mode
-
 ---
 
 ## 🔍 Verifying Installation
