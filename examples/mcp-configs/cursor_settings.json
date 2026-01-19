@@ -1,0 +1,18 @@
+{
+  "mcp.servers": {
+    "swarm": {
+      "command": "docker",
+      "args": ["exec", "-i", "swarm-mcp-server", "fastmcp", "run", "server.py"],
+      "env": {}
+    },
+    "swarm-local": {
+      "command": "python",
+      "args": ["-m", "fastmcp", "run", "server.py"],
+      "cwd": "v:/Projects/Servers/swarm",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "OPENAI_API_KEY": "YOUR_KEY_HERE"
+      }
+    }
+  }
+}

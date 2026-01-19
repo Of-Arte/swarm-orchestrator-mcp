@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "swarm": {
+      "command": "docker",
+      "args": ["exec", "-i", "swarm-mcp-server", "fastmcp", "run", "server.py"],
+      "description": "Swarm v3.0 Algorithmic Orchestrator - Code analysis, search, and refactoring"
+    },
+    "docker": {
+      "command": "docker-mcp",
+      "description": "Docker container management - Create, run, and manage containers"
+    },
+    "github": {
+      "command": "mcp-server-github",
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "description": "GitHub operations - Repos, issues, PRs, and code management"
+    },
+    "filesystem": {
+      "command": "mcp-server-filesystem",
+      "args": ["--allowed-directory", "C:\\Projects"],
+      "description": "Local filesystem access - Read/write files and directories"
+    }
+  }
+}

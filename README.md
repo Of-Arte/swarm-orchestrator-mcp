@@ -1,185 +1,388 @@
-# 🐝 Project Swarm v3.0: The Algorithmic Blackboard
+# 🐝 Project Swarm v1.0
 
 **A Python-native, algorithmically augmented orchestrator for autonomous AI software engineering.**
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://docker.com)
-[![Tests](https://img.shields.io/badge/Tests-41%20passed-brightgreen.svg)](#testing)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## 🚀 What's New in v3.0
+## 🎯 Overview
 
-Swarm v3.0 transforms the passive "project board" into an active **Algorithmic Blackboard**. It replaces simple LLM loops with specialized, deterministic algorithms for key engineering tasks, resulting in **3x higher velocity** and **zero-conflict collaboration**.
+Project Swarm is an **MCP-native orchestrator** that augments AI agents with specialized algorithms for code analysis, search, debugging, and collaborative editing. Built for **Antigravity IDE** and compatible with any MCP client.
 
-### 7 New Algorithm Workers
-| Worker | Function | Benefit |
-|:-------|:---------|:--------|
-| **HippoRAG** | Context Retrieval | Finds code via AST graphs & PageRank (multi-hop understanding) |
-| **OCC Validator** | Concurrency | Optimistic Concurrency Control with atomic writes & versioning |
-| **CRDT Merger** | Collaboration | Conflict-Free Replicated Data Types for concurrent edits |
-| **Consensus** | Decision Making | Weighted voting with domain-specific Elo ratings |
-| **Debate** | Reasoning | Sparse topology debate engine to bust sycophancy |
-| **Z3 Verifier** | Verification | Symbolic execution for mathematically proven correctness |
-| **Ochiai SBFL** | Debugging | Spectrum-Based Fault Localization to pinpoint bugs automatically |
+### Key Features
+
+- **🔍 Hybrid Search Engine** - Semantic + keyword search with optional embeddings
+- **🧠 HippoRAG Retrieval** - AST-based knowledge graphs with Personalized PageRank
+- **🐛 Ochiai SBFL** - Automated fault localization for debugging
+- **🔒 OCC Validator** - Optimistic Concurrency Control for conflict-free edits
+- **🌐 CRDT Merger** - Real-time collaborative editing support
+- **✅ Z3 Verifier** - Symbolic execution and formal verification
+- **⚖️ Consensus Engine** - Weighted voting for multi-agent decision making
+- **🐳 Docker Ready** - Runs as an MCP server locally or in containers
 
 ---
 
 ## ⚡ Quick Start
 
-### Installation
+### Option 1: Docker (Recommended)
 
 ```bash
-pip install -r requirements.txt
-```
-
-### Basic Usage
-
-**Deep Context Retrieval (HippoRAG)**
-```bash
-python orchestrator.py retrieve "database connection logic"
-# Returns Ranked AST nodes via Personalized PageRank
-```
-
-**Automated Debugging (SBFL)**
-```bash
-python orchestrator.py debug --test-cmd "pytest tests/"
-# Returns ranked suspicious lines: "file.py:42 (0.95)"
-```
-
-**Performance Benchmark**
-```bash
-python orchestrator.py benchmark
-# Measures v3.0 throughput vs v2.0 baseline
-```
-
-**Project Commands**
-```bash
-python orchestrator.py status       # Check blackboard state
-python orchestrator.py validate     # Run quality gates
-python orchestrator.py search "foo" # Hybrid search
-```
-
-### 🐳 Docker Deployment (MCP Server)
-
-Swarm can run as a **Model Context Protocol (MCP) Server** via Docker, allowing AI agents to interact with it:
-
-**Build and Run with Docker Compose:**
-```bash
-# Set your API keys (optional, for embeddings)
-export OPENAI_API_KEY="your-key"
-export GOOGLE_API_KEY="your-key"
+# Clone the repository
+git clone https://github.com/yourusername/swarm.git
+cd swarm
 
 # Start the MCP server
 docker compose up -d --build
 
-# Check logs
+# Verify it's running
 docker compose logs -f swarm-orchestrator
-
-# Server runs at: http://localhost:8000
+# Server available at http://localhost:8000
 ```
 
-**MCP Tools Available:**
-- `process_task(instruction)` - Create and execute tasks
-- `get_status()` - View blackboard state
-- `search_codebase(query)` - Hybrid semantic + keyword search
-- `index_codebase(path)` - Index a codebase for search
-- `retrieve_context(query)` - HippoRAG context retrieval
+### Option 2: Local Installation
 
-**Connect from Claude Desktop:**
-Add to your `claude_desktop_config.json`:
+```bash
+# Clone and install dependencies
+git clone https://github.com/yourusername/swarm.git
+cd swarm
+pip install -r requirements.txt
+
+# Run the orchestrator CLI
+python orchestrator.py status
+
+# Or run as MCP server
+python -m fastmcp run server.py
+```
+
+---
+
+## 🔌 Antigravity IDE Integration
+
+Project Swarm is built to integrate with **Antigravity IDE** via the Model Context Protocol (MCP).
+
+### Configuration
+
+Add to your Antigravity agent configuration:
+
 ```json
 {
   "mcpServers": {
-    "swarm": {
+    "swarm-orchestrator": {
       "command": "docker",
-      "args": ["exec", "-i", "swarm-mcp-server", "fastmcp", "run", "server.py"]
+      "args": ["exec", "-i", "swarm-mcp-server", "fastmcp", "run", "server.py"],
+      "enabled": true,
+      "autoAllow": ["search_codebase", "get_status", "retrieve_context"]
     }
   }
 }
 ```
 
-**Stop the server:**
+For local (non-Docker) setup:
+
+```json
+{
+  "mcpServers": {
+    "swarm-local": {
+      "command": "python",
+      "args": ["-m", "fastmcp", "run", "server.py"],
+      "cwd": "/path/to/swarm",
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
+```
+
+See [`examples/mcp-configs/`](./examples/mcp-configs/) for more configuration examples (Cursor, CLI tools, etc.).
+
+---
+
+## 🛠️ MCP Tools Available
+
+Once connected, your AI agent has access to these tools:
+
+| Tool | Description | Use Case |
+|:-----|:------------|:---------|
+| `process_task(instruction)` | Execute a task using Swarm's algorithmic workers | Code refactoring, analysis, complex workflows |
+| `search_codebase(query)` | Hybrid semantic + keyword search | Quick code discovery, feature location |
+| `index_codebase(path)` | Build search index with embeddings | First-time setup, after major changes |
+| `retrieve_context(query)` | HippoRAG deep context retrieval | Architectural analysis, understanding relationships |
+| `get_status()` | Check blackboard state | Monitor task progress |
+
+### CLI Commands
+
+Swarm also provides a rich CLI for direct usage:
+
 ```bash
-docker compose down
-```
+# Search and indexing
+python orchestrator.py index           # Build search index
+python orchestrator.py search "auth"   # Quick keyword search
+python orchestrator.py find "MyClass"  # Exact term lookup
 
+# Advanced algorithms
+python orchestrator.py retrieve "database layer"  # HippoRAG context
+python orchestrator.py debug --test-cmd pytest    # Ochiai fault localization
+python orchestrator.py verify "function_name"     # Z3 symbolic verification
 
-## 🏗 Architecture
-
-Swarm v3.0 uses a **Task-Based Dispatch** system. The Orchestrator analyzes task flags to route work to the most efficient solver:
-
-```mermaid
-graph TD
-    T[New Task] --> D{Check Flags}
-    D -- context_needed --> R[HippoRAG]
-    D -- conflicts_detected --> O[OCC Validator]
-    D -- concurrent_edits --> C[CRDT Merger]
-    D -- tests_failing --> S[Ochiai SBFL]
-    D -- requires_debate --> B[Debate Engine]
-    D -- verification_required --> Z[Z3 Verifier]
-    D -- No Flags --> L[LLM Worker]
-```
-
-### Directory Structure
-```
-swarm/
-├── mcp_core/
-│   ├── algorithms/             # v3.0 Workers
-│   │   ├── hipporag_retriever.py
-│   │   ├── occ_validator.py
-│   │   ├── crdt_merger.py
-│   │   ├── voting_consensus.py
-│   │   ├── debate_engine.py
-│   │   ├── z3_verifier.py
-│   │   └── ochiai_localizer.py
-│   ├── orchestrator_loop.py    # Algorithm-aware logic
-│   └── search_engine.py        # v2.0 Hybrid Search
-├── tests/
-│   └── algorithms/             # Comprehensive v3.0 Suite
-├── orchestrator.py             # CLI Entrypoint
-└── requirements.txt
+# Project management
+python orchestrator.py status          # Check orchestrator state
+python orchestrator.py validate        # Run quality gates
+python orchestrator.py benchmark       # Performance metrics
 ```
 
 ---
 
-## 🧪 Testing & Quality
+## ⚙️ Optional Features
 
-Swarm v3.0 is built with rigorous quality standards:
+Swarm is designed to work with minimal dependencies, but offers enhanced capabilities when optional features are enabled.
+
+### 🔍 Semantic Search (Embeddings)
+
+**Default:** Keyword-only search (no external dependencies)
+
+**Optional:** Enable semantic search with API-based or local embeddings.
+
+#### Option A: Gemini Embeddings (Recommended)
 
 ```bash
-python -m pytest tests/algorithms/ -v
+# Set API key
+export GEMINI_API_KEY="your-key-here"
+
+# Index with Gemini embeddings
+python orchestrator.py index --provider gemini
 ```
 
-**Coverage Targets:**
-- ✅ **95%** Unit Test Coverage
-- ✅ **85%** Mutation Score (mutmut)
-- ✅ **Zero** Lint Errors (flake8)
+**Provider:** Google Gemini API  
+**Model:** `models/embedding-001`  
+**Setup:** `pip install google-generativeai` (already in requirements.txt)
+
+#### Option B: OpenAI Embeddings
+
+```bash
+# Set API key
+export OPENAI_API_KEY="your-key-here"
+
+# Index with OpenAI embeddings
+python orchestrator.py index --provider openai
+```
+
+**Provider:** OpenAI API  
+**Model:** `text-embedding-3-small`  
+**Setup:** `pip install openai` (already in requirements.txt)
+
+#### Option C: Local Embeddings (Offline)
+
+For air-gapped or offline environments:
+
+```bash
+# 1. Uncomment in requirements.txt:
+# sentence-transformers>=2.2.0
+
+# 2. Install
+pip install sentence-transformers
+
+# 3. Index with local model
+python orchestrator.py index --provider local
+```
+
+**Provider:** sentence-transformers  
+**Model:** `all-MiniLM-L6-v2` (384-dim, fast)  
+**Setup:** ~400MB download on first run
+
+#### Configuration Details
+
+The search engine automatically detects available providers:
+
+```python
+# In search_engine.py
+def get_embedding_provider(provider_type="auto"):
+    """
+    Auto-detection order:
+    1. GEMINI_API_KEY → GeminiEmbedding
+    2. OPENAI_API_KEY → OpenAIEmbedding
+    3. sentence-transformers → LocalEmbedding
+    4. None → Keyword-only search
+    """
+```
+
+**When to use each:**
+- **Gemini**: Best quality, fast, requires internet + API key
+- **OpenAI**: Alternative to Gemini, similar quality
+- **Local**: Offline capability, no API costs, slower indexing
+- **None (keyword)**: Works immediately, exact/partial matching only
+
+### 🧮 Z3 Symbolic Verification
+
+**Optional:** Install Z3 for formal verification capabilities.
+
+```bash
+# Already in requirements.txt
+pip install z3-solver>=4.12.0
+```
+
+**Size:** ~100MB  
+**Use case:** Proving code correctness mathematically
+
+### 📊 Code Coverage (SBFL)
+
+**Optional:** Install coverage tools for Ochiai fault localization.
+
+```bash
+# Already in requirements.txt
+pip install coverage>=7.0
+```
+
+**Use case:** Automated debugging with spectrum-based fault localization
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+graph TD
+    Agent[AI Agent / Antigravity IDE] -->|MCP Protocol| Server[FastMCP Server]
+    Server --> Orch[Orchestrator]
+    Server --> Search[Search Engine]
+    Server --> Algo[Algorithm Workers]
+    
+    Algo --> Hippo[HippoRAG]
+    Algo --> SBFL[Ochiai SBFL]
+    Algo --> OCC[OCC Validator]
+    Algo --> CRDT[CRDT Merger]
+    Algo --> Z3[Z3 Verifier]
+    
+    Search --> Embed[Optional: Embeddings]
+    Embed -.-> Gemini[Gemini API]
+    Embed -.-> OpenAI[OpenAI API]
+    Embed -.-> Local[Local Model]
+```
+
+### Task-Based Dispatch
+
+The orchestrator routes tasks to specialized algorithms based on flags:
+
+```python
+if task.context_needed:
+    → HippoRAG (AST graph + PageRank)
+if task.tests_failing:
+    → Ochiai SBFL (fault localization)
+if task.conflicts_detected:
+    → OCC Validator (concurrency control)
+if task.concurrent_edits:
+    → CRDT Merger (collaborative editing)
+if task.verification_required:
+    → Z3 Verifier (symbolic execution)
+```
+
+---
+
+## 🔧 Configuration
+
+### Environment Variables
+
+```bash
+# Optional: Embedding providers (choose one)
+export GEMINI_API_KEY="your-gemini-key"
+export OPENAI_API_KEY="your-openai-key"
+export GOOGLE_API_KEY="your-google-key"  # Alias for Gemini
+
+# Docker-specific (if using docker compose)
+# Add to .env file in project root
+PYTHONUNBUFFERED=1
+GEMINI_API_KEY=your-key
+```
+
+### Docker Compose
+
+The `docker-compose.yml` automatically passes environment variables:
+
+```yaml
+services:
+  swarm-orchestrator:
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    ports:
+      - "8000:8000"
+```
 
 ---
 
 ## 📦 Dependencies
 
-- **Core:** `typer`, `rich`, `pydantic`
-- **Algorithms:**
-  - `networkx` (HippoRAG)
-  - `pycrdt` (CRDTs)
-  - `z3-solver` (Verification)
-  - `coverage` (SBFL)
-  - `mutmut` (Mutation Testing)
+### Core (Required)
 
-All heavyweight dependencies (like z3) are **optional** and degrade gracefully if missing.
+```
+pydantic>=2.9.0        # Data validation
+typer>=0.12.0          # CLI framework
+rich>=13.9.0           # Terminal output
+filelock>=3.15.0       # State management
+fastmcp>=2.0.0         # MCP server
+```
+
+### Optional (Enable Features)
+
+```
+# Semantic Search (pick one or none)
+google-generativeai>=0.3.0    # Gemini embeddings
+openai>=1.0.0                 # OpenAI embeddings
+# sentence-transformers>=2.2.0  # Local embeddings (offline)
+
+# Algorithm Workers
+networkx>=3.0          # HippoRAG graphs (required)
+pycrdt>=0.9.0          # CRDT (required)
+z3-solver>=4.12.0      # Symbolic verification (optional)
+coverage>=7.0          # SBFL debugging (optional)
+```
+
+See [`requirements.txt`](./requirements.txt) for full list.
+
+---
+
+## 🧪 Testing & Quality
+
+```bash
+# Run test suite
+python -m pytest tests/ -v
+
+# Run quality gates
+python orchestrator.py validate
+
+# Check coverage
+pytest --cov=mcp_core tests/
+```
+
+**Quality Targets:**
+- ✅ 95% Unit Test Coverage
+- ✅ 85% Mutation Score
+- ✅ Zero Lint Errors (flake8)
 
 ---
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create feature branch
-3. Run tests: `pytest tests/algorithms/`
-4. Submit PR
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for guidelines.
 
 ---
 
-**Built with 💜 by Project Vgony**
+## 📄 License
+
+MIT License - See [`LICENSE`](./LICENSE) for details.
+
+---
+
+## 🔗 Resources
+
+- **MCP Protocol:** https://modelcontextprotocol.io
+- **Antigravity IDE:** (Configure with examples in `examples/mcp-configs/`)
+- **FastMCP:** https://github.com/jlowin/fastmcp
+- **Docker:** https://docs.docker.com/get-docker/
+
+---
+
+**Built with 💜 for autonomous AI development**

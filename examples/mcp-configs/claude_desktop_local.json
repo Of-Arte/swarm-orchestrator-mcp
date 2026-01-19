@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "swarm-local": {
+      "command": "python",
+      "args": ["-m", "fastmcp", "run", "server.py"],
+      "cwd": "v:/Projects/Servers/swarm",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "GOOGLE_API_KEY": "${GOOGLE_API_KEY}"
+      },
+      "description": "Swarm MCP Server (running locally without Docker)"
+    }
+  }
+}

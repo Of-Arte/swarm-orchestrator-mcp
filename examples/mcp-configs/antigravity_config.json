@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "swarm-orchestrator": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "swarm-mcp-server",
+        "fastmcp",
+        "run",
+        "server.py"
+      ],
+      "enabled": true,
+      "autoAllow": ["search_codebase", "get_status"]
+    }
+  }
+}

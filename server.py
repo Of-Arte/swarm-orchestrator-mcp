@@ -50,13 +50,36 @@ def get_indexer() -> CodebaseIndexer:
 @mcp.tool()
 def process_task(instruction: str) -> str:
     """
-    Create and process a task in the Swarm orchestrator.
+    Create and process a task in the Swarm orchestrator using algorithmic workers.
+    
+    **When to use:**
+    - Requesting code analysis, refactoring, or modifications
+    - Tasks requiring Swarm's algorithmic capabilities (HippoRAG, SBFL, CRDT, etc.)
+    - Complex multi-step software engineering workflows
+    - When you need Swarm's blackboard state management
+    
+    **When NOT to use:**
+    - Simple code search (use search_codebase instead)
+    - Running commands in containers (use Docker MCP tools)
+    - File system operations (use filesystem MCP tools)
+    - Git operations (use GitHub/Git MCP tools)
+    
+    **Works well with:**
+    - Docker MCP: Execute generated code in isolated environments
+    - GitHub MCP: Apply Swarm changes to repositories
+    - Filesystem MCP: Read files before processing
+    
+    **Example:**
+    ```
+    process_task("Refactor the authentication module to use async/await")
+    # → Swarm analyzes code, applies algorithmic transformations
+    ```
     
     Args:
-        instruction: The task instruction/description
+        instruction: Natural language task description
         
     Returns:
-        Task ID and initial status
+        Task ID, status, and initial feedback from Swarm workers
     """
     try:
         orch = get_orchestrator()
@@ -88,8 +111,25 @@ def get_status() -> str:
     """
     Get the current status of all tasks in the Swarm blackboard.
     
+    **When to use:**
+    - Checking progress of previously submitted tasks
+    - Monitoring Swarm's internal state
+    - Debugging task execution flows
+    - Before creating new tasks to avoid duplicates
+    
+    **When NOT to use:**
+    - Checking Docker container status (use Docker MCP)
+    - Viewing file contents (use filesystem tools)
+    - Git repository status (use GitHub MCP)
+    
+    **Example:**
+    ```
+    get_status()
+    # → Returns list of all tasks with IDs, status (PENDING/COMPLETED), descriptions
+    ```
+    
     Returns:
-        Formatted status of all tasks
+        Formatted list of all tasks with their current status
     """
     try:
         orch = get_orchestrator()
@@ -114,13 +154,42 @@ def search_codebase(query: str, top_k: int = 5, keyword_only: bool = False) -> s
     """
     Search the codebase using hybrid semantic + keyword search.
     
+    **When to use:**
+    - Finding functions/classes by semantic description (e.g., "authentication logic")
+    - Locating implementation of specific features
+    - Discovering code patterns or similar implementations
+    - Quick lookups before deeper analysis with retrieve_context()
+    
+    **When NOT to use:**
+    - Deep architectural analysis (use retrieve_context for AST-based graph reasoning)
+    - File tree navigation (use filesystem MCP tools)
+    - Cross-repository search (use GitHub MCP search tools)
+    - Regex-based pattern matching (use grep/ripgrep tools)
+    
+    **Works well with:**
+    - retrieve_context(): Start with search, then deep-dive with HippoRAG
+    - Docker MCP: Search for code, then test in containers
+    - process_task(): Find code to modify, then create Swarm task
+    
+    **Examples:**
+    ```
+    # Semantic search
+    search_codebase("database connection pooling")
+    
+    # Literal function name search
+    search_codebase("calculate_metrics", keyword_only=True)
+    
+    # Find all error handlers
+    search_codebase("exception handling", top_k=10)
+    ```
+    
     Args:
-        query: Search query (natural language or keywords)
-        top_k: Number of results to return (default 5)
-        keyword_only: Use only keyword matching (default False)
+        query: Natural language description or exact keywords
+        top_k: Number of results to return (1-50, default 5)
+        keyword_only: Skip semantic matching for faster literal searches
         
     Returns:
-        Formatted search results with file paths and snippets
+        Formatted search results with file paths, line numbers, scores, and code snippets
     """
     try:
         indexer = get_indexer()
@@ -166,14 +235,45 @@ def search_codebase(query: str, top_k: int = 5, keyword_only: bool = False) -> s
 @mcp.tool()
 def index_codebase(path: str = ".", provider: str = "auto") -> str:
     """
-    Index the codebase for semantic search.
+    Index the codebase for semantic search capabilities.
+    
+    **When to use:**
+    - First-time setup before using search_codebase()
+    - After significant code changes to refresh embeddings
+    - When switching to a different codebase/directory
+    - To enable semantic (meaning-based) search vs keyword-only
+    
+    **When NOT to use:**
+    - Before every search (index persists until manually refreshed)
+    - On extremely large codebases (>100k files) without filtering
+    - When only keyword search is needed (works without indexing)
+    
+    **Prerequisites:**
+    - Set OPENAI_API_KEY or GOOGLE_API_KEY for semantic embeddings
+    - Or use provider="local" for offline embedding models (slower)
+    
+    **Works well with:**
+    - search_codebase(): Required for semantic search capabilities
+    - Docker MCP: Index mounted volumes inside containers
+    
+    **Examples:**
+    ```
+    # Index current directory with auto-detected provider
+    index_codebase()
+    
+    # Index specific path with OpenAI embeddings
+    index_codebase("/path/to/project", provider="openai")
+    
+    # Offline indexing (keyword-only if no local model available)
+    index_codebase(provider="local")
+    ```
     
     Args:
-        path: Path to codebase (default current directory)
-        provider: Embedding provider (gemini, openai, local, auto)
+        path: Absolute or relative path to codebase root (default: current directory)
+        provider: Embedding provider - "auto" | "gemini" | "openai" | "local"
         
     Returns:
-        Indexing status and statistics
+        Number of indexed code chunks and status message
     """
     try:
         config = IndexConfig(root_path=path)
@@ -204,14 +304,54 @@ def index_codebase(path: str = ".", provider: str = "auto") -> str:
 def retrieve_context(query: str, top_k: int = 10) -> str:
     """
     Use HippoRAG to retrieve relevant code context via AST graph + PageRank.
-    More powerful than keyword search for finding related functionality.
+    
+    **When to use:**
+    - Understanding code architecture and relationships
+    - Finding all code related to a feature (multi-hop reasoning)
+    - Analyzing dependencies and call graphs
+    - Deep dives after initial search_codebase() results
+    - Complex refactoring requiring full context understanding
+    
+    **When NOT to use:**
+    - Simple function name lookups (use search_codebase with keyword_only=True)
+    - First-time exploration (use search_codebase first, it's faster)
+    - Non-Python codebases (HippoRAG currently Python-only via AST)
+    
+    **Comparison to search_codebase:**
+    - search_codebase: Fast, surface-level, uses embeddings
+    - retrieve_context: Slower, deep analysis, uses AST + graph algorithms
+    - **Best practice:** Search first, retrieve context for deep dives
+    
+    **Works well with:**
+    - search_codebase(): Find entry points, then retrieve full context
+    - process_task(): Get context, then create informed refactoring tasks
+    - Docker MCP: Retrieve context, test in isolated environment
+    
+    **Technical details:**
+    - Builds Abstract Syntax Tree (AST) for all Python files
+    - Creates knowledge graph of code relationships
+    - Runs Personalized PageRank to find semantically related nodes
+    - Returns ranked results by graph centrality + relevance
+    
+    **Examples:**
+    ```
+    # Find all authentication-related code
+    retrieve_context("user authentication flow")
+    
+    # Understand database layer architecture
+    retrieve_context("database models and migrations", top_k=15)
+    
+    # Deep dive after search
+    search_codebase("payment processing")  # Fast overview
+    retrieve_context("payment processing")  # Deep architectural understanding
+    ```
     
     Args:
-        query: Query to retrieve context for
-        top_k: Number of context chunks to return (default 10)
+        query: Natural language description of concept/feature to analyze
+        top_k: Number of context chunks to return (1-50, default 10)
         
     Returns:
-        Formatted context chunks with relevance scores
+        Ranked code chunks with node types, PPR scores, file locations, and content
     """
     try:
         from mcp_core.algorithms import HippoRAGRetriever
