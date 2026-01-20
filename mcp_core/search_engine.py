@@ -211,13 +211,37 @@ class CodebaseIndexer:
         
         return chunks
     
-    def index_all(self, provider: Optional[EmbeddingProvider] = None) -> None:
-        """Index all files and generate embeddings."""
+    def index_all(self, provider: Optional[EmbeddingProvider] = None, max_workers: int = 4) -> None:
+        """
+        Index all files and generate embeddings with multi-threading.
+        
+        Args:
+            provider: Optional embedding provider for semantic search
+            max_workers: Number of threads for parallel file processing (default: 4)
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        from threading import Lock
+        
         files = self.scan_files()
         self.chunks = []
+        chunks_lock = Lock()
         
-        for file_path in files:
-            self.chunks.extend(self.chunk_file(file_path))
+        logger.info(f"Indexing {len(files)} files with {max_workers} threads...")
+        
+        # Multi-threaded file chunking
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all file chunking tasks
+            futures = {executor.submit(self.chunk_file, file_path): file_path for file_path in files}
+            
+            # Collect results as they complete
+            for future in as_completed(futures):
+                try:
+                    file_chunks = future.result()
+                    with chunks_lock:
+                        self.chunks.extend(file_chunks)
+                except Exception as e:
+                    file_path = futures[future]
+                    logger.error(f"Error chunking {file_path}: {e}")
         
         logger.info(f"Created {len(self.chunks)} chunks")
         
