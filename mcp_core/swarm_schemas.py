@@ -76,43 +76,7 @@ class AuthorSignature(BaseModel):
     role: Literal["architect", "engineer", "auditor", "system"]
     timestamp: datetime = Field(default_factory=datetime.now)
     action: str  # e.g., "created", "modified", "approved"
-    content_hash: str  # SHA256 of artifact content
-    signature: str  # SHA256(agent_id + action + content_hash)
-    
-    @classmethod
-    def create(cls, agent_id: str, role: str, action: str, content: str) -> "AuthorSignature":
-        """Create a cryptographically signed author signature."""
-        import hashlib
-        
-        # Hash the content
-        content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
-        
-        # Create signature: hash of agent_id + action + content_hash
-        sig_data = f"{agent_id}:{action}:{content_hash}"
-        signature = hashlib.sha256(sig_data.encode('utf-8')).hexdigest()
-        
-        return cls(
-            agent_id=agent_id,
-            role=role,
-            action=action,
-            content_hash=content_hash,
-            signature=signature
-        )
-    
-    def verify(self, content: str) -> bool:
-        """Verify that signature matches the content."""
-        import hashlib
-        
-        # Recompute content hash
-        expected_content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
-        if expected_content_hash != self.content_hash:
-            return False
-        
-        # Recompute signature
-        sig_data = f"{self.agent_id}:{self.action}:{self.content_hash}"
-        expected_signature = hashlib.sha256(sig_data.encode('utf-8')).hexdigest()
-        
-        return expected_signature == self.signature
+    signature: Optional[str] = None  # Git provides attribution for IDE usage
 
 
 class Task(BaseModel):
