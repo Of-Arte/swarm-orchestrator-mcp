@@ -173,3 +173,26 @@ class ProjectProfile(BaseModel):
     def update_validation(self, intent: IntentType, result: GateResult) -> None:
         self.validation.results[intent] = result
         self.validation.phase = "COMPLETED"  # Simplified logic
+
+# --- 6. Deliberation Schemas (v3.3) ---
+
+class DeliberationStep(BaseModel):
+    """A single step in the deliberation process."""
+    step: int
+    name: str
+    worker: str
+    output: Any
+    duration_ms: int = 0
+    timestamp: datetime = Field(default_factory=datetime.now)
+
+
+class DeliberationResult(BaseModel):
+    """The complete result of a deliberation."""
+    task_id: str
+    problem: str
+    context: str = ""
+    constraints: List[str] = Field(default_factory=list)
+    steps: List[DeliberationStep] = Field(default_factory=list)
+    final_answer: str = ""
+    confidence: float = 0.0
+    created_at: datetime = Field(default_factory=datetime.now)

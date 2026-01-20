@@ -484,11 +484,11 @@ def mcp_discover():
 
 @mcp_app.command("config")
 def mcp_config(
-    format: str = typer.Option("vscode", help="Config format: vscode, cursor, or windsurf"),
+    config_format: str = typer.Option("vscode", "--format", help="Config format: vscode, cursor, or windsurf"),
     transport: str = typer.Option("stdio", help="Transport mode: stdio (docker exec) or sse (network)")
 ):
     """Generate IDE MCP client configuration."""
-    console.print(f"[bold blue]🛠️ Generating {format} configuration for {transport} transport...[/bold blue]")
+    console.print(f"[bold blue]🛠️ Generating {config_format} configuration for {transport} transport...[/bold blue]")
     
     server_name = "swarm-orchestrator"
     cwd = os.getcwd()
@@ -530,7 +530,7 @@ def mcp_config(
     console.print(json.dumps(config, indent=2))
     
     # Save to file if requested (optional logic here)
-    if format == "vscode":
+    if config_format == "vscode":
         dest = os.path.join(cwd, ".vscode", "mcp.json")
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         # We don't overwrite user's main config, but we provide the snippet

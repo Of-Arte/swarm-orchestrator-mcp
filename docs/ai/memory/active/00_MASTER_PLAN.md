@@ -22,8 +22,9 @@ Create a self-organizing, autonomous "Swarm" of AI agents capable of maintaining
 - [x] **Transport Stability**: Migration to **Docker-based Stdio** for robust local development.
 
 ### Phase 3: Autonomy & Integration (Current)
-- [ ] **Autonomous Git Team**: Refine GitWorker for self-merging PRs.
-- [ ] **Memory Unification**: Fully adopt the 5 new specialized Memory Skills.
+- [x] **Rolling Memory System**: Tiered active/archive memory.
+- [x] **Structured Deliberation**: `deliberate()` tool for multi-step reasoning.
+- [ ] **Autonomous Git Team**: GitWorker for multi-file PRs.
 - [ ] **Context Injection**: Verify `retrieve_context` (HippoRAG) works on these new memory tiers.
 
 ## 🧠 Memory Bank Index

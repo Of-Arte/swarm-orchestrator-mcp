@@ -13,14 +13,21 @@ def get_docker_mcp_servers():
         servers = []
         for line in result.stdout.strip().split('\n'):
             if not line: continue
-            parts = line.split('\t')
-            if len(parts) < 4: continue
+            # Split by at least 2 spaces or a tab
+            parts = re.split(r'\t| {2,}', line.strip())
+            # print(f"DEBUG: parts={parts}")
+            if len(parts) < 3: continue
             
-            container_id, name, ports, status = parts
+            container_id = parts[0]
+            name = parts[1]
+            ports = parts[2]
+            status = parts[3] if len(parts) > 3 else "Unknown"
             
-            # Look for mapped ports that might be MCP (usually 8000, 8765, etc.)
-            # Example port string: 0.0.0.0:8000->8000/tcp
-            mcp_match = re.search(r'0\.0\.0\.0:(\d+)->\d+/tcp', ports)
+            # print(f"DEBUG: name={name}, ports={ports}")
+            
+            # Look for mapped ports
+            # Matches 0.0.0.0:8000->8000/tcp or 8000/tcp
+            mcp_match = re.search(r'(?:0\.0\.0\.0:|\[::\]:)?(\d+)->\d+/tcp', ports)
             
             if mcp_match:
                 port = mcp_match.group(1)

@@ -166,3 +166,41 @@ Base: {base_branch}
 """
 
 
+
+
+# ============================================================================
+# Deliberation Prompts (v3.3)
+# ============================================================================
+
+def prompt_synthesizer(sub_problems: list, worker_outputs: dict, constraints: list[str]) -> str:
+    """Generates the prompt for synthesizing multi-worker outputs into a coherent solution."""
+    
+    constraints_text = "\\n".join(f"- {c}" for c in constraints) if constraints else "None"
+    
+    outputs_text = ""
+    for i, (worker, output) in enumerate(worker_outputs.items(), 1):
+        outputs_text += f"\\n### Worker {i}: {worker}\\n{output}\\n"
+    
+    return f"""
+You are the Synthesizer in a structured deliberation process.
+
+Your role is to combine the outputs from multiple algorithmic workers into a coherent, actionable solution.
+
+## Sub-Problems Analyzed:
+{chr(10).join(f'{i+1}. {sp}' for i, sp in enumerate(sub_problems))}
+
+## Worker Outputs:
+{outputs_text}
+
+## Constraints:
+{constraints_text}
+
+## Your Task:
+Synthesize these worker outputs into a single, coherent recommendation. Include:
+1. **Solution Summary**: What should be done?
+2. **Supporting Evidence**: Which worker outputs support this?
+3. **Confidence Score** (0.0-1.0): How confident are you in this synthesis?
+4. **Next Actions**: Concrete steps to implement this.
+
+Provide your synthesis in a clear, structured format.
+"""

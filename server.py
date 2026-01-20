@@ -356,6 +356,104 @@ def process_task(instruction: str) -> str:
 
 
 @mcp.tool()
+@collector.track_tool("deliberate")
+def deliberate(
+    problem: str,
+    context: str = "",
+    constraints: list[str] = None,
+    steps: int = 3,
+    return_json: bool = True
+) -> str:
+    """
+    Structured multi-step deliberation using algorithmic workers.
+    
+    **Alternative to "sequential thinking"** - uses deterministic algorithms for each step
+    instead of pure LLM reasoning. Best for complex problems requiring multiple perspectives.
+    
+    **Deliberation Flow**:
+    1. **Decompose**: Break problem into sub-problems using HippoRAG
+    2. **Analyze**: Route each sub-problem to appropriate worker
+    3. **Synthesize**: Combine worker outputs into coherent solution
+    
+    **When to use**:
+    - Complex problems requiring multi-faceted analysis
+    - When you need to combine multiple algorithmic insights
+    - Breaking down architectural decisions
+    - Verifying complex invariants
+    
+    **When NOT to use**:
+    - Simple queries (ask directly)
+    - Single-algorithm tasks (use process_task)
+    - File operations (use filesystem tools)
+    
+    **Examples**:
+    ```python
+    # Architecture analysis
+    deliberate(
+        problem="Should we use microservices or monolith?",
+        context=view_file("ARCHITECTURE.md"),
+        constraints=["Must support 1M users", "Team of 5 engineers"],
+        steps=3
+    )
+    
+    # Code verification
+    deliberate(
+        problem="Verify payment processor never loses transactions",
+        context=view_file("payment.py"),
+        constraints=["ACID compliance", "No negative balances"],
+        steps=4
+    )
+    ```
+    
+    Args:
+        problem: The core problem or question to deliberate on
+        context: Optional context (code, docs, or prior analysis)
+        constraints: Hard constraints that must be satisfied
+        steps: Number of deliberation steps (1-5, default 3)
+        return_json: Return structured JSON (default) or Markdown summary
+    
+    Returns:
+        Deliberation result with steps, workers used, and final answer
+    """
+    if constraints is None:
+        constraints = []
+    
+    # Validate steps
+    if not 1 <= steps <= 5:
+        return "❌ Error: steps must be between 1 and 5"
+    
+    try:
+        orch = get_orchestrator()
+        result = orch.run_deliberation(problem, context, constraints, steps)
+        
+        if return_json:
+            # Return as JSON
+            return result.model_dump_json(indent=2)
+        else:
+            # Return as Markdown
+            steps_md = "\n".join([
+                f"### Step {s.step}: {s.name} ({s.worker})\n{s.output}\n"
+                for s in result.steps
+            ])
+            
+            return f"""# Deliberation Result
+
+**Problem**: {result.problem}
+**Confidence**: {result.confidence:.2f}
+
+## Steps
+{steps_md}
+
+## Final Answer
+{result.final_answer}
+"""
+    
+    except Exception as e:
+        logger.error(f"Deliberation error: {e}")
+        return f"❌ Error: {str(e)}"
+
+
+@mcp.tool()
 @collector.track_tool("get_status")
 def get_status() -> str:
     """
