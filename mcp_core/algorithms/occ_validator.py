@@ -197,9 +197,9 @@ class OCCValidator:
         theirs: str
     ) -> Optional[str]:
         """
-        Attempt three-way merge for non-overlapping changes.
+        Attempt three-way merge for non-overlapping changes using AST analysis.
         
-        This is a simplified merge strategy that works for disjoint edits
+        This implementation works for disjoint edits at the function/class level
         (e.g., Agent A modifies function X, Agent B modifies function Y).
         
         Args:
@@ -210,22 +210,140 @@ class OCCValidator:
         Returns:
             Merged content if successful, None if conflicts detected
         """
-        # Simple line-based merge
-        # TODO: Implement AST-based merge for Python code
+        # Quick check: if identical, no merge needed
+        if ours == theirs:
+            return ours
         
+        # Try AST-based merge for Python files
+        try:
+            import ast
+            
+            # Parse all three versions
+            base_tree = ast.parse(base)
+            our_tree = ast.parse(ours)
+            their_tree = ast.parse(theirs)
+            
+            # Extract top-level definitions (functions and classes)
+            base_defs = self._extract_definitions(base_tree)
+            our_defs = self._extract_definitions(our_tree)
+            their_defs = self._extract_definitions(their_tree)
+            
+            # Detect conflicts: same definition modified by both
+            conflicts = []
+            for name in base_defs.keys():
+                base_code = base_defs[name]
+                our_code = our_defs.get(name, base_code)
+                their_code = their_defs.get(name, base_code)
+                
+                # Conflict if both modified the same definition
+                if our_code != base_code and their_code != base_code and our_code != their_code:
+                    conflicts.append(name)
+            
+            if conflicts:
+                logger.warning(f"AST merge conflict in: {', '.join(conflicts)}")
+                return None
+            
+            # Merge: combine all changes
+            merged_defs = base_defs.copy()
+            
+            # Apply our changes
+            for name, code in our_defs.items():
+                if code != base_defs.get(name):
+                    merged_defs[name] = code
+            
+            # Apply their changes (only if we didn't change it)
+            for name, code in their_defs.items():
+                if code != base_defs.get(name) and name not in conflicts:
+                    merged_defs[name] = code
+            
+            # Reconstruct the file
+            merged_content = self._reconstruct_file(base, merged_defs)
+            
+            logger.info("✅ AST-based merge successful")
+            return merged_content
+            
+        except SyntaxError:
+            # Not valid Python, fall back to line-based merge
+            logger.debug("Not Python code, attempting line-based merge")
+            return self._attempt_line_merge(base, ours, theirs)
+        except Exception as e:
+            logger.warning(f"AST merge failed: {e}")
+            return None
+    
+    def _extract_definitions(self, tree: "ast.AST") -> dict[str, str]:
+        """
+        Extract top-level function and class definitions from AST.
+        
+        Returns a dict mapping definition names to their source code.
+        """
+        import ast
+        
+        definitions = {}
+        for node in ast.iter_child_nodes(tree):
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef)):
+                name = node.name
+                code = ast.unparse(node)
+                definitions[name] = code
+        
+        return definitions
+    
+    def _reconstruct_file(self, base: str, merged_defs: dict[str, str]) -> str:
+        """
+        Reconstruct a Python file with merged definitions.
+        
+        Preserves imports and module-level code from base,
+        replaces function/class definitions with merged versions.
+        """
+        import ast
+        
+        base_tree = ast.parse(base)
+        
+        # Separate imports and module-level statements from definitions
+        imports = []
+        module_stmts = []
+        
+        for node in base_tree.body:
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                imports.append(ast.unparse(node))
+            elif not isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef)):
+                module_stmts.append(ast.unparse(node))
+        
+        # Reconstruct file
+        parts = []
+        
+        # Add imports
+        if imports:
+            parts.extend(imports)
+            parts.append("")  # Blank line after imports
+        
+        # Add module-level statements
+        if module_stmts:
+            parts.extend(module_stmts)
+            parts.append("")
+        
+        # Add merged definitions
+        for code in merged_defs.values():
+            parts.append(code)
+            parts.append("")  # Blank line between definitions
+        
+        return "\n".join(parts)
+    
+    def _attempt_line_merge(self, base: str, ours: str, theirs: str) -> Optional[str]:
+        """
+        Fallback line-based merge for non-Python files.
+        
+        Uses simple diff logic to detect disjoint line changes.
+        """
         base_lines = base.splitlines()
         our_lines = ours.splitlines()
         their_lines = theirs.splitlines()
         
         if our_lines == their_lines:
-            # No actual conflict
             return ours
         
-        # For now, fail conservatively
+        # Conservative: fail if any overlap detected
         # A production implementation would use difflib.SequenceMatcher
-        # or tree-sitter for AST-based merging
-        
-        logger.warning("Semantic merge not yet implemented for this conflict")
+        logger.warning("Line-based merge not fully implemented")
         return None
     
     def _atomic_write(self, resource_path: str, content: str) -> None:

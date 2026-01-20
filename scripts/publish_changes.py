@@ -37,10 +37,7 @@ def publish_changes():
     load_local_env()
     print("🚀 Initiating Autonomous Publish Sequence...", flush=True)
     
-    # Debug Env
-    keys = [k for k in os.environ.keys() if "KEY" in k or "TOKEN" in k]
-    print(f"🔑 Detected Keys: {keys}", flush=True)
-    
+    # Initiate orchestrator
     try:
         orch = Orchestrator()
         

@@ -5,6 +5,7 @@ __pycache__
 .git
 .pytest_cache
 .mutmut-cache
+.env
 .gemini
 swarm
 docker-compose.yml
