@@ -47,11 +47,25 @@ def load_dynamic_tools(mcp: FastMCP) -> int:
             # Call register function if it exists
             if hasattr(module, "register"):
                 module.register(mcp)
-                logger.info(f"✅ Loaded dynamic tool: {tool_file.name}")
+                logger.info(f"✅ Loaded dynamic tool (via register): {tool_file.name}")
                 loaded += 1
             else:
-                logger.warning(f"⚠️ {tool_file.name} has no register() function")
+                # Inspect module for top-level functions that look like tools
+                # Heuristic: Functions that are not private and not imported
+                import inspect
+                for name, func in inspect.getmembers(module, inspect.isfunction):
+                    if name.startswith("_") or func.__module__ != module.__name__:
+                        continue
+                    
+                    try:
+                        mcp.tool()(func)
+                        logger.info(f"    - Registered function: {name}")
+                        loaded += 1
+                    except Exception as e:
+                        logger.warning(f"Could not register {name}: {e}")
                 
+                logger.info(f"✅ Loaded dynamic tool module: {tool_file.name}")
+
         except Exception as e:
             logger.error(f"❌ Failed to load {tool_file.name}: {e}")
     

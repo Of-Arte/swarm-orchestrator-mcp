@@ -1,0 +1,49 @@
+[
+  {
+    "name": "check_health",
+    "description": "Check the health of the Swarm MCP server.\nReturns status of orchestrator, indexer, and connectivity.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "debug_mcp_transport",
+    "description": "Debug and profile MCP transport connectivity for troubleshooting 'the gate'.\n\n**Usage Heuristics**:\n- Use when SSE (HTTP) connections are timing out or returning 5xx.\n- Use to verify 'docker exec' reachability for stdio-based container access.\n- Useful for diagnosing Windows Firewall or port mapping issues.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "target_url": {
+          "type": "string",
+          "description": "HTTP URL to ping (e.g., http://localhost:8000/health)"
+        },
+        "container_name": {
+          "type": "string",
+          "description": "Name of the docker container to exec into (e.g., swarm-mcp-server)"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "peek_output",
+    "description": "Run a command and return the first N lines of output synchronously.\n\nWARNING: Use only for fast, read-only commands (ls, git status, cat). \nDo NOT use for long-running processes or commands that modify state interactively.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "Shell command to execute"
+        },
+        "lines": {
+          "type": "integer",
+          "description": "Number of lines to return (default 20)",
+          "default": 20
+        }
+      },
+      "required": ["command"],
+      "additionalProperties": false
+    }
+  }
+]

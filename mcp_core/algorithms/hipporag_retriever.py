@@ -83,6 +83,7 @@ class HippoRAGRetriever:
         self.lite_mode = lite_mode
         self.graph: Optional['nx.DiGraph'] = None
         self.node_metadata: Dict[str, Dict] = {}
+        self.cache_path: Optional[Path] = None
         
         # Initialize parser registry
         self.parser_registry = ParserRegistry()
@@ -97,25 +98,123 @@ class HippoRAGRetriever:
         mode_str = "Lite Mode (Python only)" if self.lite_mode else "Standard Mode"
         logger.info(f"HippoRAG initialized in {mode_str}. Supported languages: {', '.join(langs)}")
     
+    def save_graph(self, cache_path: Optional[str] = None) -> bool:
+        """
+        Persist graph and metadata to disk for fast reload.
+        
+        Args:
+            cache_path: Path to save cache (default: .hipporag_cache in cwd)
+            
+        Returns:
+            True if save successful
+        """
+        import pickle
+        
+        if self.graph is None:
+            logger.warning("No graph to save")
+            return False
+        
+        if cache_path is None:
+            cache_path = ".hipporag_cache"
+        
+        path = Path(cache_path)
+        
+        try:
+            cache_data = {
+                "graph": self.graph,
+                "node_metadata": self.node_metadata,
+                "version": "1.0"
+            }
+            
+            with open(path, "wb") as f:
+                pickle.dump(cache_data, f, protocol=pickle.HIGHEST_PROTOCOL)
+            
+            self.cache_path = path
+            logger.info(f"Graph saved to {path} ({path.stat().st_size / 1024:.1f} KB)")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to save graph: {e}")
+            return False
+    
+    def load_graph(self, cache_path: Optional[str] = None) -> bool:
+        """
+        Load cached graph and metadata from disk.
+        
+        Args:
+            cache_path: Path to cache file (default: .hipporag_cache in cwd)
+            
+        Returns:
+            True if load successful
+        """
+        import pickle
+        
+        if cache_path is None:
+            cache_path = ".hipporag_cache"
+        
+        path = Path(cache_path)
+        
+        if not path.exists():
+            logger.debug(f"No cache found at {path}")
+            return False
+        
+        try:
+            with open(path, "rb") as f:
+                cache_data = pickle.load(f)
+            
+            # Validate cache version
+            if cache_data.get("version") != "1.0":
+                logger.warning("Cache version mismatch, rebuilding")
+                return False
+            
+            self.graph = cache_data["graph"]
+            self.node_metadata = cache_data["node_metadata"]
+            self.cache_path = path
+            
+            logger.info(
+                f"Graph loaded from cache: {self.graph.number_of_nodes()} nodes, "
+                f"{self.graph.number_of_edges()} edges"
+            )
+            return True
+            
+        except Exception as e:
+            logger.warning(f"Failed to load cache: {e}")
+            return False
+
+    
     def build_graph_from_ast(
         self,
         codebase_path: str,
-        extensions: Optional[List[str]] = None
+        extensions: Optional[List[str]] = None,
+        cache_path: Optional[str] = None,
+        use_cache: bool = True
     ) -> 'nx.DiGraph':
         """
         Extract function calls, imports, and class inheritance from AST.
         
-        Now supports multiple languages via parser plugins.
+        Now supports caching for fast reload.
         
         Args:
             codebase_path: Root directory of codebase
             extensions: File extensions to analyze (auto-detects supported if None)
+            cache_path: Path to cache file (default: .hipporag_cache in codebase_path)
+            use_cache: If True, load from cache if available (default: True)
             
         Returns:
             Directed graph with code entities as nodes
         """
-        graph = nx.DiGraph()
         base_path = Path(codebase_path)
+        
+        # Set default cache path
+        if cache_path is None:
+            cache_path = str(base_path / ".hipporag_cache")
+        
+        # Try to load from cache first
+        if use_cache and self.load_graph(cache_path):
+            return self.graph
+        
+        # Build fresh graph
+        graph = nx.DiGraph()
         
         # Auto-detect supported extensions if not specified
         if extensions is None:
@@ -150,6 +249,9 @@ class HippoRAGRetriever:
             f"Graph built: {graph.number_of_nodes()} nodes, "
             f"{graph.number_of_edges()} edges"
         )
+        
+        # Auto-save cache
+        self.save_graph(cache_path)
         
         return graph
     

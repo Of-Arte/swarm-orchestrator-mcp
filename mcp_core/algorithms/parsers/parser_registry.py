@@ -98,12 +98,15 @@ class ParserRegistry:
         
         return sorted(self._parsers.keys())
     
-    def _try_register_treesitter_parsers(self) -> None:
+    def register_optional_parsers(self) -> None:
         """
         Attempt to load optional Tree-sitter parsers.
         
         Silently skips parsers whose dependencies are not installed.
         """
+        if self._treesitter_attempted:
+            return
+            
         registered = []
         
         # Try JavaScript/JSX
@@ -121,6 +124,8 @@ class ParserRegistry:
             registered.append("TypeScript")
         except ImportError:
             logger.debug("Tree-sitter-typescript not installed, skipping")
+            
+        self._treesitter_attempted = True
         
         if registered:
             logger.info(f"Multi-language support enabled: {', '.join(registered)}")
@@ -129,3 +134,7 @@ class ParserRegistry:
                 "No optional language parsers loaded. "
                 "Install tree-sitter packages for JS/TS support."
             )
+
+    def _try_register_treesitter_parsers(self) -> None:
+        """Deprecated alias for register_optional_parsers."""
+        self.register_optional_parsers()
