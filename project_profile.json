@@ -1,0 +1,56 @@
+{
+  "schema_version": "2.0.0",
+  "metadata": {},
+  "provenance_log": [],
+  "stack_fingerprint": {
+    "primary_language": "python",
+    "toolchain_variant": "pip",
+    "detected_version": null,
+    "is_monorepo": false,
+    "frameworks": []
+  },
+  "toolchain_config": {
+    "version": "2.0",
+    "stack_id": "python:pip",
+    "actions": {
+      "test": {
+        "command": "pytest",
+        "timeout_seconds": 300,
+        "output_format": "text",
+        "output_path": null,
+        "adapter": null
+      },
+      "lint": {
+        "command": "flake8 .",
+        "timeout_seconds": 300,
+        "output_format": "text",
+        "output_path": null,
+        "adapter": null
+      },
+      "mutate": {
+        "command": "mutmut run",
+        "timeout_seconds": 300,
+        "output_format": "text",
+        "output_path": null,
+        "adapter": null
+      }
+    },
+    "environment": {},
+    "max_retries": 3,
+    "budget_cap_tokens": 100000
+  },
+  "tasks": {},
+  "validation": {
+    "phase": "IDLE",
+    "results": {}
+  },
+  "active_context": {},
+  "memory_bank": {},
+  "worker_models": {
+    "default": "gemini-2.0-flash-exp",
+    "architect": "gemini-2.0-flash-exp",
+    "engineer": "gemini-2.0-flash-exp",
+    "auditor": "gemini-2.0-flash-exp",
+    "git-writer": "llama-3.2-3b"
+  }
+}

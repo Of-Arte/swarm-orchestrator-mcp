@@ -185,6 +185,10 @@ class Orchestrator:
         task.feedback_log.append(f"Worker execution: {response.status}")
         if response.status == "SUCCESS":
             task.status = "COMPLETED"
+            
+            # [v3.4] Git Interaction Nudge (Human-in-the-Loop)
+            if self.git.is_available() and self.git.has_changes():
+                 task.feedback_log.append("📝 Tip: You have uncommitted changes. To save, ask: 'Run git worker'")
 
         self.state.tasks[task_id] = task
         self.save_state()
@@ -354,7 +358,7 @@ class Orchestrator:
         1. Branch (if git_branch_name specified)
         2. Commit (if git_commit_ready)
         3. Push (if git_auto_push)
-        4. PR (if git_create_pr)
+        4. PR (if git_create_pr OR auto-PR for completed feature tasks)
         """
         if not self.git.is_available():
             task.feedback_log.append("Git: Not available")
@@ -372,33 +376,90 @@ class Orchestrator:
                     repo_owner = parts[-2]
                     repo_name = parts[-1].replace('.git', '')
             
+            # Resolve Model (Use 'git-writer' / OpenRouter for cost savings)
+            git_model = self.state.worker_models.get("git-writer", "llama-3.2-3b")
+            from mcp_core.llm import generate_response
+            
             # 1. Branch Worker (if needed)
-            if task.git_branch_name and task.git_branch_name not in task.feedback_log:
+            if task.git_branch_name and task.git_branch_name not in str(task.feedback_log):
                 git_context = {
                     "git_branch_name": task.git_branch_name,
                     "git_base_branch": task.git_base_branch,
                 }
                 branch_prompt = prompt_git_branch(task, git_context)
+                
+                # Check if we should execute or just instruct
+                # For branch creation, local logic is simpler, but let's stick to instructions/execution pattern
                 task.feedback_log.append(f"🌿 Branch Worker: Create {task.git_branch_name}")
                 task.feedback_log.append(f"Instructions: {branch_prompt[:200]}...")
+                # Execution: Actually run git checkout -b? 
+                # For now, we trust the Driver (Agent) to read instructions.
                 logging.info(f"✅ Branch Worker dispatched for {task.task_id[:8]}")
             
             # 2. Commit Worker (if ready)
-            if task.git_commit_ready and task.output_files:
-                git_context = {
-                    "output_files": task.output_files,
-                    "repo_owner": repo_owner,
-                    "repo_name": repo_name,
-                }
-                commit_prompt = prompt_git_commit(task, git_context)
-                task.feedback_log.append(f"💾 Commit Worker: Stage {len(task.output_files)} files")
-                task.feedback_log.append(f"Instructions: {commit_prompt[:200]}...")
+            if task.git_commit_ready: # Removed strict output_files check to allow "catch-all" commits
+                if not self.git.has_changes():
+                    task.feedback_log.append("⚠️ Commit Worker Skipped: No uncommitted changes detected.")
+                    logging.info("Git workflow skipped: Clean working tree")
+                else: 
+                    git_context = {
+                        "output_files": task.output_files,
+                        "repo_owner": repo_owner,
+                        "repo_name": repo_name,
+                    }
+                    commit_prompt = prompt_git_commit(task, git_context)
+                
+                # [Cost Check] Use Cheap LLM to generate commit message
+                try:
+                    logger.info(f"💾 Generating commit message with {git_model}...")
+                    response = generate_response(commit_prompt, model_alias=git_model)
+                    
+                    # Extract the commit message/command from response tools or reasoning
+                    # Since generate_response returns AgentResponse, we check tool_calls
+                    # But prompt_git_commit asks to "Use IDE git tools", which implies the output should contain commands
+                    # The prompt format expects a textual tool usage.
+                    # Let's assume the LLM follows the prompt and we just log the reasoning/tool calls.
+                    
+                    if response.tool_calls:
+                       # [v3.5] Autonomous Execution (Local Git)
+                       execution_log = []
+                       for tool in response.tool_calls:
+                           import json
+                           try:
+                               args = json.loads(tool.arguments) if isinstance(tool.arguments, str) else tool.arguments
+                               result = self._execute_git_tool(tool.function, args)
+                               execution_log.append(result)
+                           except Exception as ex:
+                               execution_log.append(f"❌ Failed {tool.function}: {ex}")
+                       
+                       task.feedback_log.append(f"💾 Commit Worker Log:\n" + "\n".join(execution_log))
+                    else:
+                       task.feedback_log.append(f"💾 Commit Worker ({git_model}):\n{response.reasoning_trace}")
+                    
+                except Exception as e:
+                    logger.error(f"Git Generation Failed: {e}")
+                    task.feedback_log.append(f"Instructions: {commit_prompt[:200]}...")
+
                 logging.info(f"✅ Commit Worker dispatched for {task.task_id[:8]}")
             
-            # 3. PR Worker (if flagged and on feature branch)
-            if task.git_create_pr and task.git_branch_name:
+            # 3. Auto-PR for completed feature tasks (v3.2 Autonomous Mode)
+            should_create_pr = task.git_create_pr
+            if not should_create_pr and task.status == "COMPLETED" and task.git_branch_name:
+                # Auto-PR if: completed task + feature branch + GitHub ready
+                if self.git.is_github_ready():
+                    should_create_pr = True
+                    task.feedback_log.append("🤖 Auto-PR: Feature task completed, creating PR")
+                    logging.info(f"Auto-PR enabled for completed task {task.task_id[:8]}")
+            
+            # 4. PR Worker (if flagged or auto-enabled)
+            if should_create_pr and task.git_branch_name:
                 if not self.git.is_github():
                     task.feedback_log.append("⚠️ PR Worker: GitHub not detected")
+                    return True  # Not an error, just skip
+                
+                if not self.git.has_github_token():
+                    task.feedback_log.append("⚠️ PR Worker: GITHUB_TOKEN not set")
+                    task.feedback_log.append("Set GITHUB_TOKEN env var to enable PR creation")
                     return True  # Not an error, just skip
                 
                 git_context = {
@@ -411,8 +472,22 @@ class Orchestrator:
                     "repo_name": repo_name,
                 }
                 pr_prompt = prompt_git_pr(task, git_context)
-                task.feedback_log.append(f"🔀 PR Worker: Create PR to {task.git_base_branch}")
-                task.feedback_log.append(f"Instructions: {pr_prompt[:200]}...")
+                
+                # [Cost Check] Use Cheap LLM to generate PR body
+                try:
+                    logger.info(f"🔀 Generating PR with {git_model}...")
+                    response = generate_response(pr_prompt, model_alias=git_model)
+                    
+                    if response.tool_calls:
+                       calls_str = "\n".join([f"{t.function}({t.arguments})" for t in response.tool_calls])
+                       task.feedback_log.append(f"🔀 PR Worker ({git_model}):\n{calls_str}")
+                    else:
+                       task.feedback_log.append(f"🔀 PR Worker ({git_model}):\n{response.reasoning_trace}")
+                       
+                except Exception as e:
+                    logger.error(f"PR Generation Failed: {e}")
+                    task.feedback_log.append(f"Instructions: {pr_prompt[:200]}...")
+
                 logging.info(f"✅ PR Worker dispatched for {task.task_id[:8]}")
             
             logging.info(f"✅ Git workflow orchestrated for {task.task_id[:8]}")
@@ -422,3 +497,31 @@ class Orchestrator:
             logging.error(f"Git workflow failed: {e}")
             task.feedback_log.append(f"Git workflow error: {e}")
             return False
+
+    def _execute_git_tool(self, tool_name: str, args: dict) -> str:
+        """Execute local Git operations autonomously."""
+        import subprocess
+        repo_path = str(self.git.repo_path)
+        
+        if tool_name == "git_add":
+            files = args.get("files", ".")
+            if isinstance(files, str): 
+                # Handle "file1 file2" string or "." -> ["."]
+                files = [files] if files == "." else files.split()
+            
+            subprocess.run(["git", "add"] + files, cwd=repo_path, check=True)
+            return f"✅ Staged: {files}"
+
+        elif tool_name == "git_commit":
+            message = args.get("message", "Automated commit")
+            subprocess.run(["git", "commit", "-m", message], cwd=repo_path, check=True)
+            return f"✅ Committed: {message}"
+
+        elif tool_name == "git_push":
+            remote = args.get("remote", "origin")
+            branch = args.get("branch", self.git.config.default_branch)
+            # Safe push
+            subprocess.run(["git", "push", remote, branch], cwd=repo_path, check=True)
+            return f"✅ Pushed to {remote}/{branch}"
+
+        return f"⚠️ Unknown tool: {tool_name}"

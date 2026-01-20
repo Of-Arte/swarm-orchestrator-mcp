@@ -62,6 +62,10 @@ PYTHONUNBUFFERED=1
 # MCP server host/port (Docker only)
 MCP_HOST=0.0.0.0
 MCP_PORT=8000
+
+# System-Wide Lite Mode
+# Set to 'true' to force keyword-only search and skip heavy parsers (e.g. Tree-sitter)
+SWARM_LITE_MODE=true
 ```
 
 ---

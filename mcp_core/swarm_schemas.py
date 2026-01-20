@@ -140,10 +140,15 @@ class ProjectProfile(BaseModel):
     memory_bank: Optional[Dict[str, Any]] = None
 
 
-    # [New: Model Routing]
-    # Loads from ~/.gemini/antigravity/mcp_config.json if available
     worker_models: Dict[str, str] = Field(
-        default_factory=load_global_model_config,
+        default_factory=lambda: {
+            "default": "gemini-2.0-flash-exp",
+            "architect": "gemini-2.0-flash-exp",
+            "engineer": "gemini-2.0-flash-exp",
+            "auditor": "gemini-2.0-flash-exp",
+            "git-writer": "llama-3.2-3b",
+            **load_global_model_config()
+        },
         description="Map roles to model IDs"
     )
 

@@ -60,23 +60,42 @@ class HippoRAGRetriever:
     with optional Tree-sitter support for JavaScript, TypeScript, and more.
     """
     
-    def __init__(self):
-        """Initialize retriever with parser registry and empty graph"""
+    def __init__(self, lite_mode: Optional[bool] = None):
+        """
+        Initialize retriever.
+        
+        Args:
+            lite_mode: If True, skip loading optional parsers (Tree-sitter).
+                      If None, auto-detects from SWARM_LITE_MODE env var.
+        """
+        
         if not NETWORKX_AVAILABLE:
             raise ImportError(
                 "networkx is required for HippoRAG. "
                 "Install with: pip install networkx>=3.0"
             )
         
+        # Auto-detect lite mode if not specified
+        if lite_mode is None:
+            import os
+            lite_mode = os.environ.get("SWARM_LITE_MODE", "false").lower() == "true"
+        
+        self.lite_mode = lite_mode
         self.graph: Optional['nx.DiGraph'] = None
         self.node_metadata: Dict[str, Dict] = {}
         
-        # Initialize parser registry (Python always available)
+        # Initialize parser registry
         self.parser_registry = ParserRegistry()
+        
+        # In standard/full mode, register optional parsers (Tree-sitter)
+        # In lite mode, we stick to Python-only (default)
+        if not self.lite_mode:
+            self.parser_registry.register_optional_parsers()
         
         # Log supported languages
         langs = self.parser_registry.supported_languages()
-        logger.info(f"HippoRAG initialized with language support: {', '.join(langs)}")
+        mode_str = "Lite Mode (Python only)" if self.lite_mode else "Standard Mode"
+        logger.info(f"HippoRAG initialized in {mode_str}. Supported languages: {', '.join(langs)}")
     
     def build_graph_from_ast(
         self,

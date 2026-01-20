@@ -110,6 +110,36 @@ class GitWorker:
         """Check if repository has a remote configured."""
         return bool(self.config.remote_url)
     
+    def has_changes(self) -> bool:
+        """Check if there are any uncommitted changes (modified/staged)."""
+        if not self.is_available():
+            return False
+            
+        try:
+            import subprocess
+            # safe_run logic (or just concise subprocess here)
+            # Using --porcelain for easy parsing (empty if clean)
+            result = subprocess.run(
+                ["git", "status", "--porcelain"], 
+                cwd=str(self.repo_path), 
+                capture_output=True, 
+                text=True, 
+                timeout=5
+            )
+            return bool(result.stdout.strip())
+        except Exception as e:
+            logger.warning(f"Git status check failed: {e}")
+            return False
+    
+    def has_github_token(self) -> bool:
+        """Check if GITHUB_TOKEN environment variable is set."""
+        import os
+        return bool(os.environ.get("GITHUB_TOKEN"))
+    
+    def is_github_ready(self) -> bool:
+        """Check if GitHub MCP operations are ready (GitHub repo + token)."""
+        return self.is_github() and self.has_github_token()
+    
     def get_workflow_instructions(self) -> str:
         """
         Return instructions for coding agent to use external Git MCP tools.
@@ -134,7 +164,11 @@ Git repository detected. After completing file changes:
 """
         
         if self.is_github():
-            instructions += """   - create_pull_request: Create PR for review (GitHub)
+            if self.has_github_token():
+                instructions += """   - create_pull_request: Create PR for review (GitHub) ✅
+"""
+            else:
+                instructions += """   - create_pull_request: ⚠️ Requires GITHUB_TOKEN env var
 """
         elif self.is_gitlab():
             instructions += """   - create_merge_request: Create MR for review (GitLab)
