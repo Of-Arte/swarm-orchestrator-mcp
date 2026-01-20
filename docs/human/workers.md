@@ -76,9 +76,11 @@ else:
 ### Example Usage
 
 ```python
+<!--
 from mcp_core.algorithms import OCCValidator
 
 validator = OCCValidator(max_retries=3)
+-->
 
 # Phase 1: Read with version
 content, version = validator.read_with_version("src/auth.py")

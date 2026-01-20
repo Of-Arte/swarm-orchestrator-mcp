@@ -37,3 +37,14 @@ htmlcov/
 # Project state (optional - uncomment to track)
 # project_profile.json
 # project_profile.json.lock
+
+# Verification Artifacts
+debug_output.txt
+reproduce_pagerank.py
+test_hipporag_debug.txt
+pytest_*.txt
+benchmark_ide_vs_mcp.py
+.hipporag_cache/
+.hipporag_cache
+collection_log.txt
+logs.txt

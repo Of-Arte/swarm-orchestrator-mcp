@@ -34,7 +34,6 @@ def load_local_env():
 
 def publish_changes():
     load_local_env()
-    load_local_env()
     print("🚀 Initiating Autonomous Publish Sequence...", flush=True)
     
     # Initiate orchestrator
@@ -51,9 +50,9 @@ def publish_changes():
         # Create Publish Task
         task = Task(
             task_id="publish_trigger",
-            description="Optimize search engine (os.walk pruning) and fix async blocking in search/index tools",
+            description="Fix critical verification regressions: Remove Scipy dependency from PageRank and fix Orchestrator graph building/OCC removal",
             status="PENDING",
-            git_branch_name="feature/git-worker-v3",
+            git_branch_name="fix/verification-regressions",
             git_commit_ready=True,
             git_create_pr=False, 
             output_files=[]

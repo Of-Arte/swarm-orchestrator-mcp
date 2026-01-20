@@ -26,7 +26,7 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8000
 
 # Verify v3.0 installation works (imports algorithms)
-RUN python -c "from mcp_core.algorithms import OCCValidator; print('Swarm v3.0 Ready')"
+RUN python -c "from mcp_core.algorithms import HippoRAGRetriever; print('Swarm v3.0 Ready')"
 
 # Default command: Run MCP server (bypassing fastmcp CLI to avoid run_stdio_async bug)
 CMD ["python", "server.py", "--sse"]

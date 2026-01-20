@@ -380,7 +380,7 @@ class HippoRAGRetriever:
         personalization = {node: 1.0 / len(seed_nodes) for node in seed_nodes}
         
         try:
-            ppr_scores = nx.pagerank(
+            ppr_scores = self._simple_pagerank(
                 self.graph,
                 alpha=alpha,
                 personalization=personalization,
@@ -518,4 +518,70 @@ class HippoRAGRetriever:
         route = re.sub(r'/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}', '/:id', route, flags=re.IGNORECASE)
         
         return route
+
+    def _simple_pagerank(
+        self,
+        G: 'nx.DiGraph',
+        alpha: float = 0.85,
+        personalization: Dict[str, float] = None,
+        max_iter: int = 100,
+        tol: float = 1.0e-6
+    ) -> Dict[str, float]:
+        """
+        Simple power iteration implementation of PageRank to avoid scipy dependency.
+        """
+        if len(G) == 0:
+            return {}
+        
+        if not G.is_directed():
+            D = G.to_directed()
+        else:
+            D = G
+            
+        nodes = list(D.nodes())
+        N = len(nodes)
+        
+        # Initial uniform distribution
+        x = {n: 1.0/N for n in nodes}
+        
+        # Personalization vector
+        if personalization is None:
+            p = {n: 1.0/N for n in nodes}
+        else:
+            # Normalize personalization vector
+            s = sum(personalization.values())
+            if s == 0:
+                p = {n: 1.0/N for n in nodes}
+            else:
+                p = {n: v/s for n, v in personalization.items()}
+                # Assign 0 for missing nodes
+                for n in nodes:
+                    if n not in p:
+                        p[n] = 0.0
+                    
+        # Power iteration
+        for _ in range(max_iter):
+            xlast = x
+            x = dict.fromkeys(xlast.keys(), 0)
+            
+            dangling_sum = 0
+            for n in xlast:
+                if D.out_degree(n) == 0:
+                    dangling_sum += xlast[n]
+            
+            # spread mass
+            for n in xlast:
+                for nbr in D[n]:
+                    x[nbr] += alpha * xlast[n] / D.out_degree(n)
+            
+            # add random jump + dangling factor
+            for n in x:
+                x[n] += (1.0 - alpha) * p[n] + alpha * dangling_sum * p[n]
+            
+            # check convergence
+            err = sum([abs(x[n] - xlast[n]) for n in x])
+            if err < N * tol:
+                return x
+                
+        return x
 

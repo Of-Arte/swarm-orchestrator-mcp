@@ -16,7 +16,7 @@ from mcp_core.llm import generate_response
 
 # V3.0 Algorithms
 from mcp_core.algorithms import (
-    OCCValidator, CRDTMerger, HippoRAGRetriever,
+    CRDTMerger, HippoRAGRetriever,
     WeightedVotingConsensus, DebateEngine,
     Z3Verifier, OchiaiLocalizer, GitWorker
 )
@@ -85,21 +85,13 @@ class Orchestrator:
         if self._rag is None:
             try:
                 self._rag = HippoRAGRetriever()
+                # Auto-build graph from root_path (uses cache if available)
+                self._rag.build_graph_from_ast(self.root_path, use_cache=True)
                 logging.info("✅ HippoRAGRetriever initialized")
             except Exception as e:
                 logging.warning(f"HippoRAG unavailable: {e}")
                 self._rag = None
         return self._rag
-
-    @property
-    def occ(self):
-        """Lazy init OCCValidator"""
-        if self._occ is None:
-            try:
-                self._occ = OCCValidator()
-            except Exception as e:
-                logging.warning(f"OCC unavailable: {e}")
-        return self._occ
 
     @property
     def crdt(self):
@@ -199,10 +191,6 @@ class Orchestrator:
 
         # 1. Context Retrieval (HippoRAG)
         if task.context_needed and self._handle_context_retrieval(task):
-            algorithm_handled = True
-
-        # 2. Conflict Detection (OCC)
-        if task.conflicts_detected and self._handle_occ_validation(task):
             algorithm_handled = True
 
         # 3. Concurrent Edits (CRDT)
@@ -340,24 +328,6 @@ class Orchestrator:
             task.feedback_log.append(f"HippoRAG error: {e}")
             return False
     
-    def _handle_occ_validation(self, task: Task) -> bool:
-        """Use OCC Validator for file modifications"""
-        try:
-            # Assume task.output_files contains files to validate
-            for file_path in task.output_files:
-                content, version = self.occ.read_with_version(file_path)
-                # In a real implementation, the task would have new_content
-                # For now, just log that OCC would be used
-                task.feedback_log.append(
-                    f"OCC: Would validate {file_path} (version={version[:8]})"
-                )
-            
-            logging.info("✅ OCC validation complete")
-            return True
-            
-        except Exception as e:
-            logging.error(f"OCC failed: {e}")
-            return False
     
     def _handle_crdt_merge(self, task: Task) -> bool:
         """Use CRDT Merger for concurrent edits"""
@@ -734,8 +704,8 @@ class Orchestrator:
             worker_outputs = {}
             
             # Route based on problem keywords
-            if "refactor" in problem.lower() and self.occ:
-                worker_outputs["OCC"] = f"No conflicts detected. Safe to proceed."
+            # if "refactor" in problem.lower() and self.occ:
+            #     worker_outputs["OCC"] = f"No conflicts detected. Safe to proceed."
             if "debug" in problem.lower() and self.sbfl:
                 worker_outputs["SBFL"] = f"Suspicious lines identified via fault localization."
             if "verify" in problem.lower() and self.verifier:

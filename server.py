@@ -606,10 +606,14 @@ async def index_codebase(path: str = ".", provider: str = "auto") -> str:
             embed_provider = get_embedding_provider(provider)
             logger.info(f"Using embedding provider: {type(embed_provider).__name__}")
             indexer.index_all(embed_provider)
-        except RuntimeError as e:
-            logger.warning(f"⚠️ {e}")
-            logger.warning("Indexing files without embeddings (keyword search only)")
-            indexer.index_all(None)
+        except Exception as e:
+            logger.error(f"❌ Indexing failed with provider: {e}")
+            logger.warning("Falling back to keyword-only indexing (no embeddings)")
+            try:
+                indexer.index_all(None)
+            except Exception as inner_e:
+                logger.error(f"❌ Critical indexing failure: {inner_e}")
+                raise inner_e
         
         # Update global indexer
         _indexer = indexer

@@ -6,8 +6,6 @@ retrieval, and verification.
 """
 
 
-# OCC removed - not needed for IDE-only usage
-from mcp_core.algorithms.occ_validator import OCCValidator
 from mcp_core.algorithms.crdt_merger import CRDTMerger
 from mcp_core.algorithms.hipporag_retriever import HippoRAGRetriever, ContextChunk
 
@@ -26,7 +24,6 @@ from mcp_core.algorithms.parsers import (
 )
 
 __all__ = [
-    "OCCValidator",
     "CRDTMerger",
     "HippoRAGRetriever",
     "ContextChunk",
