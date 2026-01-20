@@ -32,7 +32,8 @@ def generate_response(prompt: str, model_alias: str = "gemini-2.0-flash-exp") ->
     
     # Gemini Model Cascade (try in order, remember what works)
     GEMINI_CASCADE = [
-        "gemini-3-flash-preview",  # Primary (newest)
+        "gemini-2.0-flash-exp",    # Stable fallback
+        "gemini-3-flash-preview",  # Experimental
         "gemini-2.5-pro",          # Fallback 1
         "gemini-2.5-flash",        # Fallback 2 (last resort)
     ]
@@ -69,18 +70,25 @@ def generate_response(prompt: str, model_alias: str = "gemini-2.0-flash-exp") ->
 
 
 def _update_working_model(model: str) -> None:
-    """Update project_profile.json with the working model."""
+    """Update project_profile.json with the working model (Thread/Process Safe)."""
     try:
         import json
         from pathlib import Path
+        from filelock import FileLock
         
         profile_path = Path("project_profile.json")
-        if profile_path.exists():
-            data = json.loads(profile_path.read_text())
-            if "worker_models" in data:
-                data["worker_models"]["default"] = model
-                profile_path.write_text(json.dumps(data, indent=2))
-                logger.info(f"📝 Updated project_profile.json: default → {model}")
+        lock_path = "project_profile.json.lock"
+        
+        # Use simple blocking lock to avoid race with Orchestrator
+        with FileLock(lock_path, timeout=5):
+            if profile_path.exists():
+                data = json.loads(profile_path.read_text())
+                if "worker_models" in data:
+                    # Only update if changed
+                    if data["worker_models"].get("default") != model:
+                        data["worker_models"]["default"] = model
+                        profile_path.write_text(json.dumps(data, indent=2))
+                        logger.info(f"📝 Updated project_profile.json: default → {model}")
     except Exception as e:
         logger.warning(f"Could not update project_profile.json: {e}")
 

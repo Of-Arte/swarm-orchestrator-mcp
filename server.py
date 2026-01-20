@@ -284,6 +284,9 @@ def get_status() -> str:
             status_lines.append(f"  • {task_id[:8]}: [{task.status}] {task.description[:50]}...")
         
         return "\n".join(status_lines)
+            status_lines.append(f"  • {task_id[:8]}: [{task.status}] {task.description[:50]}...")
+        
+        return "\n".join(status_lines)
         
     except Exception as e:
         logger.error(f"Error getting status: {e}")
@@ -682,4 +685,5 @@ if __name__ == "__main__":
     logger.info("📡 Transport: HTTP/SSE (Server-Sent Events)")
     
     # Run in SSE mode with explicit host/port configuration
+    # FastMCP.run() handles the ASGI app creation internally
     mcp.run(transport="sse", host=host, port=port)

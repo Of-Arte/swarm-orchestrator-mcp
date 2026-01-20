@@ -41,10 +41,10 @@ class Orchestrator:
         self.load_state()
 
         # [Component: Eyes]
-        self.detector = StackDetector(root_path)
+        self.detector = None # StackDetector(root_path)
 
         # [Component: Hands]
-        self.toolchain = ToolchainManager(root_path)
+        self.toolchain = None # ToolchainManager(root_path)
 
         # Initialize Stack Identity if missing
         if not self.state.stack_fingerprint:
@@ -58,15 +58,15 @@ class Orchestrator:
         self.save_state()
 
         # [V3.0: Algorithm Components]
-        self.occ = OCCValidator()
-        self.crdt = CRDTMerger()
+        self.occ = None # OCCValidator()
+        self.crdt = None # CRDTMerger()
         self.rag = None  # Lazy init (builds graph on first use)
-        self.consensus = WeightedVotingConsensus()
-        self.debate = DebateEngine()
-        self.verifier = Z3Verifier() if Z3Verifier else None
-        self.sbfl = OchiaiLocalizer() if OchiaiLocalizer else None
-        self.git = GitWorker(root_path)
-        self.sync = SyncEngine(root_path)
+        self.consensus = None # WeightedVotingConsensus()
+        self.debate = None # DebateEngine()
+        self.verifier = None # Z3Verifier() if Z3Verifier else None
+        self.sbfl = None # OchiaiLocalizer() if OchiaiLocalizer else None
+        self.git = None # GitWorker(root_path)
+        self.sync = None # SyncEngine(root_path)
         
         logging.info("✅ v3.0 Algorithm workers initialized")
         if self.git.is_available():
@@ -82,21 +82,23 @@ class Orchestrator:
             shutil.move(LEGACY_STATE_FILE, archive_name)
 
     def load_state(self) -> None:
-        if not os.path.exists(self.state_file):
-            return
-
-        with FileLock(self.lock_file):
-            try:
-                with open(self.state_file, "r") as f:
-                    data = json.load(f)
-                    self.state = ProjectProfile(**data)
-            except Exception as e:
-                logging.error(f"Failed to load state: {e}")
+        pass
+        # if not os.path.exists(self.state_file):
+        #     return
+        #
+        # with FileLock(self.lock_file):
+        #     try:
+        #         with open(self.state_file, "r") as f:
+        #             data = json.load(f)
+        #             self.state = ProjectProfile(**data)
+        #     except Exception as e:
+        #         logging.error(f"Failed to load state: {e}")
 
     def save_state(self) -> None:
-        with FileLock(self.lock_file):
-            with open(self.state_file, "w") as f:
-                f.write(self.state.model_dump_json(indent=2))
+        pass
+        # with FileLock(self.lock_file):
+        #     with open(self.state_file, "w") as f:
+        #         f.write(self.state.model_dump_json(indent=2))
 
     def process_task(self, task_id: str) -> None:
         self.load_state()
@@ -443,13 +445,13 @@ class Orchestrator:
                        task.feedback_log.append(f"💾 Commit Worker Log:\n" + "\n".join(execution_log))
                        
                        # Add push confirmation prompt
-                       task.feedback_log.append(
-                           "\n📤 **Ready to Push**\n"
-                           "Your commit is ready locally. To push to GitHub:\n"
-                           "1. Run: `git push` (manual)\n"
-                           "2. OR set `git_auto_push=True` in the task (autonomous)\n\n"
-                           "The system will NOT auto-push without explicit confirmation."
-                       )
+                       # task.feedback_log.append(
+                       #     "\n📤 **Ready to Push**\n"
+                       #     "Your commit is ready locally. To push to GitHub:\n"
+                       #     "1. Run: `git push` (manual)\n"
+                       #     "2. OR set `git_auto_push=True` in the task (autonomous)\n\n"
+                       #     "The system will NOT auto-push without explicit confirmation."
+                       # )
                     else:
                        task.feedback_log.append(f"💾 Commit Worker ({git_model}):\n{response.reasoning_trace}")
                     

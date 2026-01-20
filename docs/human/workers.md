@@ -12,7 +12,8 @@ Comprehensive guide to Project Swarm's specialized algorithm workers and their c
 4. [Z3 Verifier](#z3-verifier) - Formal Verification
 5. [CRDT Merger](#crdt-merger) - Collaborative Editing
 6. [HippoRAG](#hipporag) - Context Retrieval
-7. [Worker Routing](#worker-routing)
+7. [Git Worker](#git-worker) - Autonomous Version Control
+8. [Worker Routing](#worker-routing)
 
 ---
 
@@ -503,6 +504,46 @@ function validate_token (PPR: 0.7456)
 - **Graph Build**: ~500ms-2s (depends on codebase size)
 - **PPR Computation**: ~100-500ms
 - **Total**: ~1-3s for typical project
+
+---
+
+## Git Worker
+
+**Autonomous Version Control** - Semantically meaningful commits and PR management.
+
+### What It Does
+
+The Git Worker is a background autonomous agent that:
+1.  **Monitors** the file system for changes ("dirty state").
+2.  **Diffs** the changes to understand *what* happened.
+3.  **Generates** a Conventional Commit message using `gemini-3-flash-preview` (high speed).
+4.  **Commits** the changes (if `git_auto_commit` is enabled).
+
+### Workflow
+
+```mermaid
+graph LR
+    Diff[File Change] --> Detect{GitWorker}
+    Detect -- "Has Changes" --> LLM[Gemini-3-Flash]
+    LLM -- "Draft Message" --> Commit[Git Commit]
+    Commit -- "Push?" --> Remote[GitHub]
+```
+
+### Configuration
+
+Controlled via `project_profile.json` or `process_task` commands:
+
+```python
+# Enable/Disable
+process_task("Enable autonomous git commits")
+
+# Manual Trigger
+process_task("Commit these changes with message 'Refactor auth'")
+```
+
+### Models
+
+- **Git Writer**: Defaults to `gemini-3-flash-preview` for sub-2s latency on commit message generation.
 
 ---
 

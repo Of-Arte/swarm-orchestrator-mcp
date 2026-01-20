@@ -1,16 +1,17 @@
 # Getting Started with Project Swarm
 
-This guide will help you install and configure Project Swarm for your development environment.
+This guide will help you install and configure **Project Swarm v3.1** (Gemini-First Architecture) for your development environment.
 
 ## Prerequisites
 
 - **Python 3.11+**
-- **Docker** (recommended for MCP server deployment)
-- **Git**
+- **Docker** (recommended)
+- **Google Gemini API Key** (Required for v3.1 full functionality)
+  - *Get one here: [Google AI Studio](https://aistudio.google.com/app/apikey)*
 
 ### Optional
-- **Gemini API Key** or **OpenAI API Key** (for semantic search)
-- **sentence-transformers** (for offline semantic search)
+- **Ollama** (for local fallback)
+- **Git**
 
 ---
 
@@ -18,27 +19,28 @@ This guide will help you install and configure Project Swarm for your developmen
 
 ### Option 1: Docker (Recommended)
 
-Docker provides the easiest setup with full isolation:
+Docker provides the easiest setup with full isolation.
+
+**IMPORTANT**: Swarm v3.1 requires **SSE (Server-Sent Events)** for MCP communication. Do not use stdio.
 
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/swarm.git
 cd swarm
 
+# Create .env file
+echo "GEMINI_API_KEY=your_key_here" > .env
+
 # Start the MCP server
 docker compose up -d --build
 
 # Verify it's running
 docker compose logs -f swarm-orchestrator
-
-# Server will be available at http://localhost:8000
 ```
 
-**Advantages:**
-- No Python environment setup needed
-- Isolated dependencies
-- Easy to update and redeploy
-- Works on Windows, macOS, Linux
+**MCP Client Connection (SSE):**
+- **URL**: `http://localhost:8000/sse`
+- **Transport**: SSE (Server-Sent Events)
 
 ### Option 2: Local Python Installation
 
@@ -56,11 +58,8 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the MCP server
+# Run the MCP server (SSE Mode)
 python server.py
-
-# Or use the CLI directly
-python orchestrator.py status
 ```
 
 ---
@@ -72,30 +71,26 @@ python orchestrator.py status
 Create a `.env` file in the project root:
 
 ```bash
-# Optional: Embedding providers (choose one)
+# Required: Gemini API (Features: Search, Reasoning, Git Writer)
 GEMINI_API_KEY=your-gemini-key-here
-# OR
-OPENAI_API_KEY=your-openai-key-here
 
-# Docker-specific
-PYTHONUNBUFFERED=1
+# Optional: Local Fallback (Ollama)
+# Must point to OpenAI-compatible endpoint (/v1)
+LOCAL_LLM_URL=http://localhost:11434/v1
 ```
 
 ### Embedding Providers
 
-Swarm works with **keyword-only search** by default (no API keys needed). For semantic search:
-
-- **Gemini** (recommended): Fast, high-quality, free tier available
-- **OpenAI**: Alternative to Gemini, similar quality
-- **Local**: Offline, no API costs, requires `sentence-transformers` (~400MB download)
+Swarm v3.1 is **Gemini-First**:
+- **Gemini**: `models/text-embedding-004` (Default, Fast, High Quality)
+- **Local**: `sentence-transformers` (Offline fallback)
+- **Keyword**: BM25-like (No API needed)
 
 See [configuration.md](configuration.md) for detailed provider setup.
 
 ---
 
-## Quick Start: Lite Mode (No API Keys)
-
-**New to Swarm? Start here!** Swarm works great without API keys using keyword-only search.
+## Quick Start: First Run
 
 ### 1. Validate Environment
 
@@ -103,102 +98,44 @@ See [configuration.md](configuration.md) for detailed provider setup.
 python orchestrator.py check
 ```
 
-This checks your dependencies and suggests missing packages. If you see "Lite Mode Available", you're ready!
+This checks your dependencies and API key validity.
 
-### 2. Index & Search (Keyword-Only)
-
-```bash
-# Index without embeddings (fast, ~0.2s)
-python orchestrator.py index --provider keyword
-
-# Search for exact terms (function/class names)
-python orchestrator.py find "UserModel"
-
-# Or use search with keyword flag
-python orchestrator.py search "authenticate" --keyword
-```
-
-**Performance**: ~1ms search, works offline, zero API costs.
-
-### 3. Build AST Knowledge Graph
+### 2. Index Your Codebase
 
 ```bash
-# HippoRAG works without API keys (analyzes code structure)
-python orchestrator.py retrieve "authentication"
-```
-
-This uses Python's built-in AST parser - no embeddings needed.
-
-**Upgrade Later**: When you want semantic search ("find error handling patterns"), just add `GEMINI_API_KEY` to your environment and reindex.
-
----
-
-## First Steps
-
-### 1. Index Your Codebase
-
-```bash
-# Using CLI
+# Auto-detects Gemini > Local > Keyword
 python orchestrator.py index
-
-# Or via MCP (from AI agent)
-index_codebase()
 ```
 
-This creates a searchable index of your code. Takes ~0.2s for keyword-only, ~45s with API embeddings.
+**Performance**: ~45s for 100 files (Gemini Embeddings).
 
-### 2. Search for Code
+### 3. Search for Code
 
 ```bash
-# Keyword search (fast)
-python orchestrator.py search "UserModel" --keyword
-
 # Semantic search (understands concepts)
 python orchestrator.py search "authentication logic"
+
+# Keyword search (exact symbols)
+python orchestrator.py search "UserModel" --keyword
 ```
 
-**From AI Agent:**
-```python
-# Auto-optimized for symbols
-search_codebase("UserModel")
-# → ⚡ Auto-optimized to keyword search (~1ms)
+### 4. Process Tasks (The "Swarm")
 
-# Semantic for concepts
-search_codebase("error handling patterns")
-# → ~240ms, finds try/catch, Result types, etc.
-```
-
-### 3. Deep Code Analysis
+The Orchestrator routes complex tasks to specialized algorithmic workers:
 
 ```bash
-# HippoRAG retrieval with AST graphs
-python orchestrator.py retrieve "database layer"
-```
-
-**From AI Agent:**
-```python
-retrieve_context("authentication flow")
-# → Returns ranked code chunks with call graph relationships
-```
-
-### 4. Process Tasks
-
-```bash
-# CLI task processing
+# Refactoring Task (Routes to OCC Validator)
 python orchestrator.py task "Refactor auth.py to use async/await"
-```
 
-**From AI Agent:**
-```python
-process_task("Debug login failure in test_auth.py")
-# → Routes to Ochiai SBFL for fault localization
+# Debugging Task (Routes to Ochiai SBFL)
+python orchestrator.py task "Debug login failure in test_auth.py"
 ```
 
 ---
 
 ## MCP Integration
 
-### Antigravity IDE
+### Antigravity IDE / Generic Client
 
 Add to your MCP configuration file:
 
@@ -206,50 +143,32 @@ Add to your MCP configuration file:
 {
   "mcpServers": {
     "swarm-orchestrator": {
-      "command": "docker",
-      "args": ["exec", "-i", "swarm-mcp-server", "python", "server.py"],
+      "serverUrl": "http://localhost:8000/sse",
       "enabled": true,
-      "autoAllow": ["search_codebase", "get_status", "retrieve_context"]
+      "autoAllow": ["search_codebase", "get_status", "retrieve_context", "process_task"]
     }
   }
 }
 ```
 
-### Local (Non-Docker) Setup
-
-```json
-{
-  "mcpServers": {
-    "swarm-local": {
-      "command": "python",
-      "args": ["server.py"],
-      "cwd": "/absolute/path/to/swarm",
-      "env": {
-        "PYTHONUNBUFFERED": "1",
-        "GEMINI_API_KEY": "your-key-here"
-      }
-    }
-  }
-}
-```
-
-See [examples/mcp-configs/](../../examples/mcp-configs/) for more examples.
+**CRITICAL**: ensure you use `"serverUrl"` (SSE) and NOT `"command": "docker"` (stdio). Stdio is not supported in Docker mode for Swarm v3.1.
 
 ---
 
 ## Troubleshooting
 
+### "EOF" or "Connection Closed" in MCP Client
+
+**Cause**: You are likely using stdio transport (`docker exec ...`) instead of SSE.
+**Solution**: Change your client config to use `http://localhost:8000/sse`.
+
 ### "No index found" Error
 
-**Solution:** Run `python orchestrator.py index` first.
-
-### Slow Semantic Search
-
-**Solution:** Use keyword search for symbols (`keyword_only=True`) or switch to Gemini/OpenAI for faster API embeddings.
+**Solution**: Run `index_codebase()` or `python orchestrator.py index`.
 
 ### Docker Container Won't Start
 
-**Solution:**
+**Solution**:
 ```bash
 # Check logs
 docker compose logs swarm-orchestrator
@@ -259,22 +178,13 @@ docker compose down
 docker compose up -d --build
 ```
 
-### Import Errors
-
-**Solution:** Ensure you're in the virtual environment and dependencies are installed:
-```bash
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
 ---
 
 ## Next Steps
 
 - **[User Guide](user-guide.md)** - Learn all features in depth
-- **[API Reference](api-reference.md)** - Explore MCP tools and CLI commands
 - **[Configuration](configuration.md)** - Advanced setup options
-- **[Performance](performance.md)** - Optimization tips and benchmarks
+- **[Workers Guide](workers.md)** - Deep dive into Swarm algorithms
 
 ---
 
