@@ -47,10 +47,7 @@
   "active_context": {},
   "memory_bank": {},
   "worker_models": {
-    "default": "gemini-2.0-flash-exp",
-    "architect": "gemini-2.0-flash-exp",
-    "engineer": "gemini-2.0-flash-exp",
-    "auditor": "gemini-2.0-flash-exp",
-    "git-writer": "llama-3.2-3b"
+    "default": "gemini-3-flash-preview",
+    "git-writer": "gemini-3-flash-preview"
   }
 }

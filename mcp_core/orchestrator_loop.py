@@ -384,8 +384,8 @@ class Orchestrator:
                     repo_owner = parts[-2]
                     repo_name = parts[-1].replace('.git', '')
             
-            # Resolve Model (Use 'git-writer' / OpenRouter for cost savings)
-            git_model = self.state.worker_models.get("git-writer", "llama-3.2-3b")
+            # Resolve Model (use git-writer / Gemini for efficiency)
+            git_model = self.state.worker_models.get("git-writer", "gemini-3-flash-preview")
             from mcp_core.llm import generate_response
             
             # 1. Branch Worker (if needed)

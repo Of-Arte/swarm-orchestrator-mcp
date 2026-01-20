@@ -17,57 +17,72 @@ def generate_response(prompt: str, model_alias: str = "gemini-2.0-flash-exp") ->
     """
     logger.info(f"🧠 Routing to Model: {model_alias}")
 
-    # Routing Logic
-    is_gemini = "gemini" in model_alias or "antigravity" in model_alias
-    is_gpt = "gpt" in model_alias
+    # [v3.5] Google Gemini-First Architecture with Cascading Fallback
     
-    # [v3.2] OpenRouter Routing (Cost Optimization)
-    # Route to OpenRouter if model is in FREE_MODELS or explicitly "free"/"llama"
-    from mcp_core.providers.openrouter import FREE_MODELS, call_openrouter_json
-    is_openrouter = model_alias in FREE_MODELS or "free" in model_alias or "llama" in model_alias or "mistral" in model_alias
-    
-    if is_openrouter:
-        try:
-            # Pass model ID directly
-            data = call_openrouter_json(prompt, model_alias=model_alias)
-            logger.info(f"📊 Raw Model Data: {data}")
-            return AgentResponse(**data)
-        except Exception as e:
-            logger.error(f"❌ OpenRouter Error: {e}. Falling back to default.")
-            # Fallback to Gemini/OpenAI if OpenRouter fails
-            pass
-
-    # [v3.3] Local LLM Support (Ollama/LM Studio)
+    # 1. Local LLM Check (Opt-in via alias)
     is_local = "ollama" in model_alias or "local" in model_alias or "lmstudio" in model_alias
-    local_url = os.environ.get("LOCAL_LLM_URL", "http://localhost:11434/v1") # Default to Ollama
-
+    local_url = os.environ.get("LOCAL_LLM_URL", "http://localhost:11434/v1")
+    
     if is_local:
         return _call_local(local_url, prompt, model_alias)
 
-    # Check for API Keys
+    # 2. Main Logic - Gemini Priority with Cascading Fallback
     gemini_key = os.environ.get("GEMINI_API_KEY")
     openai_key = os.environ.get("OPENAI_API_KEY")
-
-    if is_gemini and gemini_key:
-        # Pass model ID directly (User manages mapping in config)
-        return _call_gemini(gemini_key, prompt, model_alias)
-
-    elif is_gpt and openai_key:
-        return _call_openai(openai_key, prompt, model_alias)
     
-    elif openai_key: # Fallback to OpenAI if Gemini requested but key missing
-        logger.warning(f"⚠️ Requested {model_alias} but GEMINI_KEY missing. Fallback to OpenAI.")
+    # Gemini Model Cascade (try in order, remember what works)
+    GEMINI_CASCADE = [
+        "gemini-3-flash-preview",  # Primary (newest)
+        "gemini-2.5-pro",          # Fallback 1
+        "gemini-2.5-flash",        # Fallback 2 (last resort)
+    ]
+    
+    is_gemini = "gemini" in model_alias or "flash" in model_alias or "pro" in model_alias
+    
+    if gemini_key and (is_gemini or not model_alias):
+        # If specific model requested, try it first
+        models_to_try = [model_alias] if model_alias in GEMINI_CASCADE else GEMINI_CASCADE
+        
+        for model in models_to_try:
+            try:
+                result = _call_gemini(gemini_key, prompt, model)
+                if result.status != "FAILED":
+                    # Success! Update project_profile if we had to fallback
+                    if model != model_alias:
+                        logger.info(f"✅ Model {model} worked. Consider updating project_profile.json.")
+                        _update_working_model(model)
+                    return result
+            except Exception as e:
+                logger.warning(f"⚠️ {model} failed: {e}. Trying next...")
+                continue
+        
+        # All Gemini models failed
+        logger.error("❌ All Gemini models failed.")
+
+    # 3. OpenAI Fallback (if available)
+    if openai_key:
         return _call_openai(openai_key, prompt, "gpt-4o")
 
-    elif gemini_key: # Fallback to Gemini if OpenRouter/GPT requested but key missing
-        logger.warning(f"⚠️ Requested {model_alias} but key missing/failed. Fallback to Gemini.")
-        return _call_gemini(gemini_key, prompt, "gemini-2.0-flash-exp")
+    # 4. No keys/all failed
+    logger.warning("⚠️ No API keys or all models failed. Returning MOCK response.")
+    return _mock_response(prompt)
 
-    else:
-        logger.warning(
-            "⚠️ No API keys found. Returning MOCK response."
-        )
-        return _mock_response(prompt)
+
+def _update_working_model(model: str) -> None:
+    """Update project_profile.json with the working model."""
+    try:
+        import json
+        from pathlib import Path
+        
+        profile_path = Path("project_profile.json")
+        if profile_path.exists():
+            data = json.loads(profile_path.read_text())
+            if "worker_models" in data:
+                data["worker_models"]["default"] = model
+                profile_path.write_text(json.dumps(data, indent=2))
+                logger.info(f"📝 Updated project_profile.json: default → {model}")
+    except Exception as e:
+        logger.warning(f"Could not update project_profile.json: {e}")
 
 
 def _call_local(base_url: str, prompt: str, model_id: str) -> AgentResponse:

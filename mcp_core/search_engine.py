@@ -95,8 +95,9 @@ class GeminiEmbedding(EmbeddingProvider):
     def embed(self, texts: List[str]) -> List[List[float]]:
         embeddings = []
         for text in texts:
+            # [v3.5] Use Gemini Embedding 001
             result = self.client.embed_content(
-                model="models/embedding-001",
+                model="models/text-embedding-004", # Updated to latest stable
                 content=text
             )
             embeddings.append(result['embedding'])
@@ -464,13 +465,17 @@ def get_embedding_provider(
         logger.info("Running in keyword-only mode (no API keys required)")
         return None
     
-    if provider_type == "gemini" or (provider_type == "auto" and os.environ.get("GEMINI_API_KEY")):
-        try:
-            return GeminiEmbedding(api_key)
-        except (ImportError, ValueError) as e:
-            if provider_type == "gemini":
-                raise
-            logger.warning(f"Gemini unavailable: {e}")
+    # [v3.5] Prioritize Gemini (Default)
+    if provider_type == "gemini" or (provider_type == "auto"):
+        # Auto-detect key if not provided
+        key = api_key or os.environ.get("GEMINI_API_KEY")
+        if key:
+            try:
+                return GeminiEmbedding(key)
+            except Exception as e:
+                logger.warning(f"Gemini init failed: {e}")
+                # Fallthrough to others only if explicit "auto"
+                if provider_type == "gemini": raise
     
     if provider_type == "openai" or (provider_type == "auto" and os.environ.get("OPENAI_API_KEY")):
         try:

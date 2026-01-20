@@ -12,7 +12,7 @@ fastmcp>=2.0.0
 # Search Engine (API-based by default)
 google-generativeai>=0.3.0
 openai>=1.0.0
-httpx>=0.27.0  # For OpenRouter provider
+httpx>=0.27.0  # For async HTTP requests (optional)
 
 
 

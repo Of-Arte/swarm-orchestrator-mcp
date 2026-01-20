@@ -1,7 +1,5 @@
 """
-OpenRouter and other external LLM providers for Swarm.
+External LLM providers for Swarm (currently empty - using direct Gemini/OpenAI in llm.py).
 """
 
-from .openrouter import call_openrouter, FREE_MODELS
-
-__all__ = ["call_openrouter", "FREE_MODELS"]
+__all__ = []

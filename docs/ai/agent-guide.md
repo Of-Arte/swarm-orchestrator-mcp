@@ -48,8 +48,8 @@ The system uses **Role-Based Model Routing** to save costs:
 
 | Role | Model Alias | Recommended | Cost |
 |------|-------------|-------------|------|
-| **Engineer** | `gemini-2.0-flash-exp` | Complex Logic | Low (Free Tier) |
-| **Git Writer**| `llama-3.2-3b` | Commit Msgs, PRs | Free (OpenRouter) |
+| **Engineer** | `gemini-3-flash-preview` | Complex Logic | Free (Google) |
+| **Git Writer**| `gemini-3-flash-preview` | Commit Msgs, PRs | Free (Google) |
 | **Local** | `ollama/llama3` | Offline/Secure | Free (Local) |
 
 ### How to use Local LLMs?
