@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 
-app = typer.Typer(help="Swarm Orchestrator v3.0 CLI")
+app = typer.Typer(help="Swarm Orchestrator v3.2 CLI")
 console = Console()
 
 
@@ -254,6 +254,55 @@ def find(
         
         console.print(table)
         
+    except Exception as e:
+        console.print(f"[bold red]Error: {e}[/bold red]")
+        raise typer.Exit(code=1)
+
+
+
+@app.command()
+def task(
+    instruction: str = typer.Argument(..., help="The task instruction/description"),
+    model: str = typer.Option("default", help="Model alias to use (default, engineer, architect, etc.)")
+) -> None:
+    """
+    Execute a single task using the Swarm Orchestrator.
+    Routes to the appropriate algorithmic worker based on content.
+    """
+    console.print(f"🤖 [Task] Processing: [cyan]{instruction}[/cyan]")
+    try:
+        from mcp_core.orchestrator_loop import Orchestrator
+        from mcp_core.swarm_schemas import Task
+        import uuid
+
+        orch = Orchestrator()
+        
+        # Create task
+        task_id = str(uuid.uuid4())
+        new_task = Task(
+            task_id=task_id,
+            description=instruction,
+            status="PENDING",
+            assigned_worker=None  # Will be auto-routed
+        )
+        
+        # Register task
+        orch.state.tasks[task_id] = new_task
+        orch.save_state()
+        
+        # Execute
+        orch.process_task(task_id)
+        
+        # Report result
+        final_task = orch.state.tasks[task_id]
+        if final_task.status == "COMPLETED":
+            console.print(f"[bold green]✅ Task Completed ({task_id[:8]})[/bold green]")
+            # Show last feedback item
+            if final_task.feedback_log:
+                console.print(Panel(final_task.feedback_log[-1], title="Last Feedback"))
+        else:
+            console.print(f"[bold red]❌ Task Failed ({task_id[:8]})[/bold red]")
+            
     except Exception as e:
         console.print(f"[bold red]Error: {e}[/bold red]")
         raise typer.Exit(code=1)

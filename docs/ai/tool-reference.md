@@ -132,10 +132,10 @@ Automatic routing based on instruction keywords:
 
 | Keyword | Algorithm | Trigger Pattern |
 |---------|-----------|-----------------|
-| refactor | OCC Validator | `"refactor" in instruction.lower()` |
+
 | debug | Ochiai SBFL | `"debug" in instruction.lower()` |
 | verify, prove | Z3 Verifier | `"verify" or "prove" in instruction.lower()` |
-| merge, combine | CRDT Merger | `"merge" or "combine" in instruction.lower()` |
+
 | analyze, understand | HippoRAG | `"analyze" or "understand" in instruction.lower()` |
 
 ### Output Format

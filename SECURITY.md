@@ -20,7 +20,7 @@ Swarm v3.0 includes capabilities that execute code or commands:
 
 ### File System Access
 
-- **OCC Validator**: Performs atomic writes to files.
+
 - **HippoRAG**: Reads and parses all `.py` files in the directory.
 - **Swarm Cache**: Data is stored in `.swarm-cache/`.
 

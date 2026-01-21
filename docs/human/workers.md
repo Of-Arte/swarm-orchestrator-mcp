@@ -7,13 +7,11 @@ Comprehensive guide to Project Swarm's specialized algorithm workers and their c
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [OCC Validator](#occ-validator) - Conflict Detection
-3. [Ochiai SBFL](#ochiai-sbfl) - Fault Localization
-4. [Z3 Verifier](#z3-verifier) - Formal Verification
-5. [CRDT Merger](#crdt-merger) - Collaborative Editing
-6. [HippoRAG](#hipporag) - Context Retrieval
-7. [Git Worker](#git-worker) - Autonomous Version Control
-8. [Worker Routing](#worker-routing)
+2. [Ochiai SBFL](#ochiai-sbfl) - Fault Localization
+3. [Z3 Verifier](#z3-verifier) - Formal Verification
+5. [HippoRAG](#hipporag) - Context Retrieval
+6. [Autonomous Git Worker Team](#autonomous-git-worker-team) - Autonomous Version Control
+7. [Worker Routing](#worker-routing)
 
 ---
 
@@ -27,7 +25,7 @@ Workers are automatically selected based on instruction patterns:
 
 | Instruction Pattern | Worker | Algorithm |
 |---------------------|--------|-----------|
-| "refactor...", "modify..." | OCC Validator | Optimistic Concurrency Control |
+
 | "debug...", "why is failing..." | Ochiai SBFL | Spectrum-Based Fault Localization |
 | "verify...", "prove..." | Z3 Verifier | Symbolic Execution |
 | "merge...", "combine..." | CRDT Merger | Conflict-Free Replicated Data Types |
@@ -35,94 +33,7 @@ Workers are automatically selected based on instruction patterns:
 
 ---
 
-## OCC Validator
 
-**Optimistic Concurrency Control** - Prevents data loss during concurrent file modifications.
-
-### What It Does
-
-Implements a three-phase protocol to detect and resolve conflicts when multiple agents edit the same file:
-
-1. **Read Phase**: Snapshot file with version hash (SHA256)
-2. **Process Phase**: Agent makes changes offline
-3. **Validate & Commit**: Atomic check-and-replace
-
-### Algorithm Theory
-
-**Content-Addressed Versioning**:
-```python
-version_hash = SHA256(file_content)
-```
-
-**Atomic Write Pattern**:
-```python
-if current_hash == expected_hash:
-    write_new_content()  # Success
-else:
-    attempt_merge()      # Collision detected
-```
-
-### When to Use
-
-✅ **Use OCC Validator when:**
-- Multiple agents refactoring the same codebase
-- Collaborative editing sessions
-- Preventing race conditions in file writes
-
-❌ **Don't use for:**
-- Single-agent workflows (unnecessary overhead)
-- Read-only operations
-
-### Example Usage
-
-```python
-<!--
-from mcp_core.algorithms import OCCValidator
-
-validator = OCCValidator(max_retries=3)
--->
-
-# Phase 1: Read with version
-content, version = validator.read_with_version("src/auth.py")
-
-# Phase 2: Process (agent makes changes)
-new_content = refactor(content)
-
-# Phase 3: Validate and commit
-result = validator.validate_and_commit(
-    resource_path="src/auth.py",
-    new_content=new_content,
-    expected_version=version,
-    attempt_merge=True
-)
-
-if result.status == OCCStatus.SUCCESS:
-    print(f"✅ Committed: {result.new_version}")
-elif result.status == OCCStatus.COLLISION:
-    print(f"⚠️ Collision detected, retrying...")
-elif result.status == OCCStatus.MERGE_CONFLICT:
-    print(f"❌ Manual resolution required")
-```
-
-### Merge Strategy
-
-OCC attempts **three-way merge** for non-overlapping changes:
-
-```
-Base:   def foo(): pass
-Ours:   def foo(): return 1  # Agent A
-Theirs: def bar(): pass      # Agent B
-Merged: def foo(): return 1
-        def bar(): pass      # ✅ No conflict
-```
-
-### Performance
-
-- **Read**: ~1ms (file I/O + hash)
-- **Validate**: ~2ms (hash comparison)
-- **Merge**: ~10-50ms (diff algorithm)
-
----
 
 ## Ochiai SBFL
 
@@ -303,87 +214,7 @@ else:
 
 ---
 
-## CRDT Merger
 
-**Conflict-Free Replicated Data Types** - Guarantees eventual consistency for collaborative editing.
-
-### What It Does
-
-Implements **YATA sequence CRDTs** (via `pycrdt`) to merge concurrent text edits without conflicts.
-
-### Algorithm Theory
-
-**YATA (Yet Another Transformation Approach)**:
-- Each character has a unique ID: `(agent_id, position, timestamp)`
-- Insertions are commutative: `A + B = B + A`
-- Deletions are idempotent: `delete(x) + delete(x) = delete(x)`
-
-**Example**:
-```
-Agent A: "Hello" → "Hello World"  (insert " World" at pos 5)
-Agent B: "Hello" → "Hi"           (delete "ello", insert "i")
-
-CRDT Merge: "Hi World"  # ✅ No conflict, both edits preserved
-```
-
-### When to Use
-
-✅ **Use CRDT Merger when:**
-- Multiple agents editing the same document simultaneously
-- Network partitions possible (offline editing)
-- Need strong eventual consistency
-
-❌ **Don't use for:**
-- Single-agent workflows
-- Binary files (CRDTs are text-based)
-- Structured data (use OCC instead)
-
-### Example Usage
-
-```python
-from mcp_core.algorithms import CRDTMerger
-
-merger = CRDTMerger()
-
-# Create document
-merger.create_document("doc1", initial_content="Hello")
-
-# Agent A: Insert " World"
-update_a = merger.insert_text("doc1", position=5, text=" World")
-
-# Agent B: Delete "ello", insert "i"
-update_b = merger.delete_text("doc1", start=1, end=5)
-update_b2 = merger.insert_text("doc1", position=1, text="i")
-
-# Apply updates (order doesn't matter)
-merger.apply_update("doc1", update_b)
-merger.apply_update("doc1", update_a)
-
-# Get merged state
-final = merger.get_state("doc1")
-print(final)  # "Hi World"
-```
-
-### Binary Update Vectors
-
-CRDTs use **binary diffs** for efficient synchronization:
-
-```python
-update = merger.get_update_vector("doc1")
-# → b'\x01\x02\x03...' (compact binary format)
-
-# Send to other replicas
-other_merger.apply_update("doc1", update)
-```
-
-### Performance
-
-- **Insert**: ~1-5ms per operation
-- **Delete**: ~1-5ms per operation
-- **Merge**: ~10-50ms (depends on conflict density)
-- **History**: O(n) where n = number of operations
-
----
 
 ## HippoRAG
 
@@ -509,7 +340,7 @@ function validate_token (PPR: 0.7456)
 
 ---
 
-## Git Worker
+## Autonomous Git Worker Team
 
 **Autonomous Version Control** - Semantically meaningful commits and PR management.
 
@@ -525,7 +356,7 @@ The Git Worker is a background autonomous agent that:
 
 ```mermaid
 graph LR
-    Diff[File Change] --> Detect{GitWorker}
+    Diff[File Change] --> Detect{GitManager}
     Detect -- "Has Changes" --> LLM[Gemini-3-Flash]
     LLM -- "Draft Message" --> Commit[Git Commit]
     Commit -- "Push?" --> Remote[GitHub]
@@ -557,15 +388,10 @@ Swarm analyzes instruction patterns to route tasks:
 
 ```python
 # server.py - Routing logic
-def route_worker(instruction: str) -> str:
-    if re.search(r'\b(refactor|modify|change)\b', instruction, re.I):
-        return "OCC Validator"
-    elif re.search(r'\b(debug|failing|broken)\b', instruction, re.I):
+
         return "Ochiai SBFL"
     elif re.search(r'\b(verify|prove|ensure)\b', instruction, re.I):
         return "Z3 Verifier"
-    elif re.search(r'\b(merge|combine|sync)\b', instruction, re.I):
-        return "CRDT Merger"
     elif re.search(r'\b(analyze|understand|explore)\b', instruction, re.I):
         return "HippoRAG"
     else:
@@ -577,7 +403,6 @@ def route_worker(instruction: str) -> str:
 You can explicitly request a worker:
 
 ```python
-process_task("Use OCC: Refactor auth.py to use async/await")
 process_task("Use SBFL: Debug login failure in test_auth.py")
 process_task("Use Z3: Verify calculate_tax never returns negative")
 ```
@@ -588,7 +413,7 @@ Complex tasks may use multiple workers:
 
 ```
 1. HippoRAG → Find all authentication code
-2. OCC Validator → Refactor with conflict detection
+2. General Worker → Refactor
 3. Ochiai SBFL → Debug any test failures
 4. Z3 Verifier → Verify security invariants
 ```
@@ -601,27 +426,27 @@ Complex tasks may use multiple workers:
 
 | Goal | Worker | Why |
 |------|--------|-----|
-| Prevent conflicts | OCC Validator | Atomic writes |
+
 | Find bugs | Ochiai SBFL | Coverage analysis |
 | Prove correctness | Z3 Verifier | Formal methods |
-| Merge edits | CRDT Merger | Eventual consistency |
+
 | Understand architecture | HippoRAG | Graph traversal |
 
 ### 2. Combine Workers
 
 ```python
 # Example: Refactor with verification
-process_task("Refactor auth.py to use async/await")  # OCC
+process_task("Refactor auth.py to use async/await")  # General Worker
 process_task("Verify auth.py never leaks credentials")  # Z3
 process_task("Debug any failing auth tests")  # SBFL
 ```
 
 ### 3. Understand Limitations
 
-- **OCC**: Requires file-based workflows
+
 - **SBFL**: Requires test suite
 - **Z3**: Limited to simple functions
-- **CRDT**: Text-only, no binary files
+
 - **HippoRAG**: Python AST only
 
 ---

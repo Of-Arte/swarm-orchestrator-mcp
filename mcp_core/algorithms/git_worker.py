@@ -179,6 +179,11 @@ Git repository detected. After completing file changes:
    - git_commit_ready=True: Signal commit readiness
    - git_auto_push=True: Auto-push after commit
    - git_create_pr=True: Auto-create PR/MR
+
+3. Branching Strategy:
+   - Feature/fix branches target 'dev' by default
+   - Use 'main' only for production releases
+   - PR workflow: feature → dev → main
 </git_workflow>
 """
         return instructions

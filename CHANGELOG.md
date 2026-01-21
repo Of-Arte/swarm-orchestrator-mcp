@@ -135,6 +135,9 @@ All notable changes to Project Swarm will be documented in this file.
 - Added `mcp_core/tools/dynamic` for runtime tool loading.
 - Added `mcp_core/telemetry` for event buffering.
 - Updated `worker_prompts.py` with Toolsmith persona and strict governance rules.
+  
+### Removed
+- **Legacy Algorithms**: Removed **OCR Validator** and **CRDT Merger** (superseded by Autonomous Git Worker Team).
 
 ---
 

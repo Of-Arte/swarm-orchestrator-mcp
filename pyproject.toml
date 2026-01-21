@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "swarm-mcp"
-version = "3.1.0"
-description = "Algorithmic Agentic Orchestrator with HippoRAG and CRDT"
+version = "3.2.0"
+description = "Algorithmic Agentic Orchestrator with HippoRAG and Autonomous Git Worker"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -21,13 +21,15 @@ dependencies = [
     "google-generativeai>=0.3.0",
     "openai>=1.0.0",
     "httpx>=0.27.0",
-    "pycrdt>=0.9.0",
+
     "networkx>=3.0",
     "z3-solver>=4.12.0",
     "coverage>=7.0",
     "mutmut>=2.4.0",
     "pytest>=8.3.0",
-    "flake8>=7.1.0"
+    "flake8>=7.1.0",
+    "asyncpg>=0.29.0",
+    "pgvector>=0.2.0"
 ]
 
 [project.optional-dependencies]

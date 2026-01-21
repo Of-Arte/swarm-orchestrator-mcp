@@ -1,6 +1,6 @@
 # Getting Started with Project Swarm
 
-This guide will help you install and configure **Project Swarm v3.1** for your development environment.
+This guide will help you install and configure **Project Swarm v3.2** for your development environment.
 
 ## Prerequisites
 
@@ -114,7 +114,7 @@ LOCAL_LLM_URL=http://localhost:11434/v1
 
 ### Embedding Providers
 
-Swarm v3.1 is **Gemini-First**:
+Swarm v3.2 is **Gemini-First**:
 - **Gemini**: `models/text-embedding-004` (Default, Fast, High Quality)
 - **Local**: `sentence-transformers` (Offline fallback)
 - **Keyword**: BM25-like (No API needed)
@@ -157,8 +157,8 @@ python orchestrator.py search "UserModel" --keyword
 The Orchestrator routes complex tasks to specialized algorithmic workers:
 
 ```bash
-# Refactoring Task (Routes to OCC Validator)
-python orchestrator.py task "Refactor auth.py to use async/await"
+# Git Task (Routes to Autonomous Git Team)
+python orchestrator.py task "Create a new feature branch for user auth"
 
 # Debugging Task (Routes to Ochiai SBFL)
 python orchestrator.py task "Debug login failure in test_auth.py"

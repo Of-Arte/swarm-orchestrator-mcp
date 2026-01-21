@@ -7,15 +7,12 @@ SWARM_ROOT = Path("v:/Projects/Servers/swarm")
 MEMORY_ACTIVE = SWARM_ROOT / "docs/ai/memory/active"
 MEMORY_ARCHIVE = SWARM_ROOT / "docs/ai/memory/archive"
 MASTER_PLAN = MEMORY_ACTIVE / "00_MASTER_PLAN.md"
-ERROR_LOG = MEMORY_ACTIVE / "00_ERROR_LOG.md"
-
 def test_memory_structure():
     """Verify memory tiers exist."""
     print("🔍 Testing Memory Structure...")
     assert MEMORY_ACTIVE.exists(), "Active memory folder missing"
     assert MEMORY_ARCHIVE.exists(), "Archive memory folder missing"
     assert MASTER_PLAN.exists(), "Master Plan missing"
-    assert ERROR_LOG.exists(), "Error Log missing"
     print("✅ Memory tiers verified.")
 
 def test_skill_delivery():

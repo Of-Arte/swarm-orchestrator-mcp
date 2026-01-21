@@ -23,7 +23,7 @@ Don't just describe the plan; capture the state of the world:
 - Pending blockers.
 
 ### 3. Log Errors Immediately
-If a "Connection Refused" or "EOF" occurs, log it to `active/00_ERROR_LOG.md` before attempting a second fix. This prevents "infinite loops" of failed patterns.
+If a "Connection Refused" or "EOF" occurs, query `diagnose_error()` before attempting a second fix. This prevents "infinite loops" of failed patterns. If you fix a new type of error, use `contribute_error_fix()` to update the global knowledge.
 
 ## Required Format
 

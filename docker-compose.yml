@@ -1,29 +1,14 @@
-version: '3.8'
-
 services:
-  swarm-orchestrator:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: swarm-mcp-server
-    command: [ "python", "server.py", "--sse" ]
+  db:
+    image: ankane/pgvector:latest
     ports:
-      - "8000:8000"
-    volumes:
-      # Bind mount for live development
-      - .:/app
+      - "5433:5432"
     environment:
-      - PYTHONUNBUFFERED=1
-      - IS_DOCKER=1
-      - MCP_PORT=8000
-      # API keys (pass from host environment)
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-    restart: unless-stopped # or "on-failure" if you want it to restart only if it fails
+      POSTGRES_USER: swarm
+      POSTGRES_PASSWORD: swarm-secret
+      POSTGRES_DB: swarm_memory
+    volumes:
+      - swarm_data:/var/lib/postgresql/data
 
-    networks:
-      - swarm-network
-
-networks:
-  swarm-network:
-    driver: bridge
+volumes:
+  swarm_data:

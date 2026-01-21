@@ -20,7 +20,7 @@ from mcp_core.llm import generate_response
 
 # V3.0 Algorithms
 from mcp_core.algorithms import (
-    CRDTMerger, HippoRAGRetriever,
+    HippoRAGRetriever,
     WeightedVotingConsensus, DebateEngine,
     Z3Verifier, OchiaiLocalizer, GitWorker,
     ContextPruner
@@ -52,7 +52,7 @@ class Orchestrator:
         self._toolchain = None
 
         # [V3.0: Algorithm Components] - Lazy init
-        self._crdt = None
+
         self._rag = None
         self._consensus = None
         self._debate = None
@@ -129,15 +129,7 @@ class Orchestrator:
                 self._rag = None
         return self._rag
 
-    @property
-    def crdt(self):
-        """Lazy init CRDTMerger"""
-        if self._crdt is None:
-            try:
-                self._crdt = CRDTMerger()
-            except Exception as e:
-                logging.warning(f"CRDT unavailable: {e}")
-        return self._crdt
+
 
     @property
     def consensus(self):
@@ -249,9 +241,7 @@ class Orchestrator:
         if task.context_needed and self._handle_context_retrieval(task):
             algorithm_handled = True
 
-        # 3. Concurrent Edits (CRDT)
-        if task.concurrent_edits and self._handle_crdt_merge(task):
-            algorithm_handled = True
+
 
         # 4. Consensus Required (Weighted Voting)
         if task.requires_consensus and self._handle_consensus(task):
@@ -458,22 +448,7 @@ class Orchestrator:
             return False
     
     
-    def _handle_crdt_merge(self, task: Task) -> bool:
-        """Use CRDT Merger for concurrent edits"""
-        try:
-            # Create or get CRDT document for collaborative editing
-            doc_id = f"task_{task.task_id}"
-            
-            if doc_id not in self.crdt.documents:
-                self.crdt.create_document(doc_id, "")
-            
-            task.feedback_log.append(f"CRDT: Document {doc_id} ready for merging")
-            logging.info("✅ CRDT merge initialized")
-            return True
-            
-        except Exception as e:
-            logging.error(f"CRDT failed: {e}")
-            return False
+
     
     def _handle_consensus(self, task: Task) -> bool:
         """Use Weighted Voting for multi-agent consensus"""

@@ -1,7 +1,9 @@
 
+
 import os
 import logging
 import json
+from typing import List
 
 from templates.agent_response_schema import AgentResponse
 
@@ -224,3 +226,42 @@ def _call_openai(api_key: str, prompt: str, model_id: str) -> AgentResponse:
             reasoning_trace=f"API Error: {str(e)}",
             validation_score=0.0
         )
+
+
+async def generate_embedding(text: str) -> List[float]:
+    """
+    Generate embeddings for text using configured provider (Gemini → OpenAI fallback).
+    Returns a 768-dimensional vector.
+    """
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    
+    # Try Gemini first
+    if gemini_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=gemini_key)
+            result = genai.embed_content(
+                model="models/text-embedding-004",
+                content=text,
+                task_type="retrieval_document"
+            )
+            return result['embedding']
+        except Exception as e:
+            logger.warning(f"Gemini embedding failed: {e}, trying OpenAI...")
+    
+    # Fallback to OpenAI
+    if openai_key:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=openai_key)
+            response = client.embeddings.create(
+                model="text-embedding-3-small",
+                input=text
+            )
+            return response.data[0].embedding
+        except Exception as e:
+            logger.error(f"OpenAI embedding failed: {e}")
+            raise
+    
+    raise RuntimeError("No embedding provider available (GEMINI_API_KEY or OPENAI_API_KEY required)")

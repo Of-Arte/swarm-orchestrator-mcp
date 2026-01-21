@@ -6,7 +6,6 @@ retrieval, and verification.
 """
 
 
-from mcp_core.algorithms.crdt_merger import CRDTMerger
 from mcp_core.algorithms.hipporag_retriever import HippoRAGRetriever, ContextChunk
 
 from mcp_core.algorithms.voting_consensus import WeightedVotingConsensus, Vote, ConsensusResult
@@ -25,7 +24,6 @@ from mcp_core.algorithms.parsers import (
 )
 
 __all__ = [
-    "CRDTMerger",
     "HippoRAGRetriever",
     "ContextChunk",
     "WeightedVotingConsensus",

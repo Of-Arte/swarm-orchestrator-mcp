@@ -1,6 +1,6 @@
 # Configuration
 
-Complete configuration guide for Project Swarm v3.1 (Gemini-First).
+Complete configuration guide for Project Swarm v3.2 (Gemini-First).
 
 ## Environment Variables
 
@@ -35,7 +35,7 @@ SWARM_LITE_MODE=false
 
 ### Gemini (Primary)
 
-Project Swarm v3.1 is built to run natively on the Google Gemini API.
+Project Swarm v3.2 is built to run natively on the Google Gemini API.
 
 **Setup:**
 ```bash
@@ -96,7 +96,7 @@ GEMINI_API_KEY=your-actual-api-key
 
 ## MCP Client Configuration
 
-**CRITICAL**: Swarm v3.1 uses **SSE (Server-Sent Events)** transport. Do NOT use `docker exec` (stdio) for MCP connection, as it causes immediate disconnection.
+**CRITICAL**: Swarm v3.2 uses **SSE (Server-Sent Events)** transport. Do NOT use `docker exec` (stdio) for MCP connection, as it causes immediate disconnection.
 
 ### Connection Details
 - **Type**: SSE (Server-Sent Events)

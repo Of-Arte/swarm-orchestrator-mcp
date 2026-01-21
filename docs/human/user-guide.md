@@ -82,10 +82,10 @@ Swarm automatically routes tasks to specialized algorithms:
 
 | Instruction Pattern | Algorithm | Purpose |
 |---------------------|-----------|---------|
-| "refactor..." | OCC Validator | Conflict detection + resolution |
+
 | "debug..." / "why is failing..." | Ochiai SBFL | Fault localization |
 | "verify..." / "prove..." | Z3 Verifier | Formal verification |
-| "merge..." / "combine..." | CRDT Merger | Collaborative editing |
+
 | "analyze..." / "understand..." | HippoRAG | Deep context |
 
 ### Input Guardrails
@@ -97,7 +97,7 @@ process_task("fix it")
 # → ❌ Task Rejected: Instruction too short. Please be specific.
 
 process_task("Refactor auth.py to use async/await")
-# → ✅ Accepted and routed to OCC Validator
+# → ✅ Accepted and routed to General Worker
 ```
 
 ### Best Practices

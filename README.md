@@ -120,7 +120,7 @@ flowchart LR
 - **HippoRAG**: AST-based knowledge graphs with Personalized PageRank.
 - **Ochiai SBFL**: Statistical fault localization for debugging.
 - **Z3 Verifier**: Formal verification using SMT solving.
-- **CRDT Merger**: Conflict-Free Replicated Data Types.
+
 
 </td>
 <td width="50%">
@@ -143,7 +143,7 @@ flowchart LR
 | **Version Control** | Basic git tools | Autonomous multi-role Git engine |
 | **Language Support** | Single or limited | Python, JavaScript, TypeScript (extensible) |
 | **Memory Management** | Stateless | Rolling memory with active/archive tiers |
-| **Verification** | None | Z3 SMT solver integration |
+
 
 ---
 
@@ -271,19 +271,7 @@ search_codebase("error handling patterns")
 
 ---
 
-### 🔒 **OCC Validator: Conflict-Free Editing**
 
-Optimistic Concurrency Control ensures your edits won't conflict with concurrent changes:
-
-```python
-# Swarm automatically validates edits before applying
-process_task("Refactor auth.py to use async/await")
-# → OCC checks: Has auth.py changed since we read it?
-# → If conflict: Suggests merge strategy
-# → If clean: Applies atomically
-```
-
----
 
 ### 🐛 **Ochiai SBFL: Automated Fault Localization**
 
@@ -354,7 +342,6 @@ Refactor payment/processor.py to:
 """)
 
 # Swarm will:
-# ✓ Route to OCC Validator to detect conflicts
 # ✓ Analyze AST to understand current structure
 # ✓ Apply changes atomically
 # ✓ Verify no concurrent edits occurred
@@ -425,7 +412,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 | **Codebase Indexing** (Gemini) | ~45s (150 chunks) | N/A | - |
 | **Codebase Indexing** (Local) | ~60-120s | N/A | - |
 | **HippoRAG Retrieval** | ~1-2s | N/A (unique feature) | - |
-| **OCC Validation** | ~50ms | Manual review | **∞** |
+
 
 ---
 

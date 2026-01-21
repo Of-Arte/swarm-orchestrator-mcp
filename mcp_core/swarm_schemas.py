@@ -95,7 +95,6 @@ class Task(BaseModel):
 
     # [v3.0: Algorithm Dispatch Flags]
     conflicts_detected: bool = Field(default=False, description="Trigger external conflict resolution")
-    concurrent_edits: bool = Field(default=False, description="Trigger CRDT merger")
     context_needed: bool = Field(default=False, description="Trigger HippoRAG retrieval")
     requires_consensus: bool = Field(default=False, description="Trigger weighted voting")
     requires_debate: bool = Field(default=False, description="Trigger debate engine")
@@ -109,7 +108,7 @@ class Task(BaseModel):
     
     # [v3.2: Branch & PR Management]
     git_branch_name: Optional[str] = Field(default=None, description="Feature branch name")
-    git_base_branch: str = Field(default="main", description="Base branch for PR")
+    git_base_branch: str = Field(default="dev", description="Base branch for PR")
     git_pr_title: Optional[str] = Field(default=None, description="PR title")
     git_pr_body: Optional[str] = Field(default=None, description="PR description")
 

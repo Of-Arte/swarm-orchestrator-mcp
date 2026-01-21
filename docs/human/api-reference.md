@@ -130,10 +130,10 @@ def process_task(instruction: str) -> str
 **Task Routing:**
 | Instruction Pattern | Algorithm |
 |---------------------|-----------|
-| "refactor..." | OCC Validator |
+
 | "debug..." | Ochiai SBFL |
 | "verify..." | Z3 Verifier |
-| "merge..." | CRDT Merger |
+
 | "analyze..." | HippoRAG |
 
 **Examples:**

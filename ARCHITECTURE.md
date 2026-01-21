@@ -18,7 +18,7 @@ graph TD
     Orchestrator -- Embeddings --> Gemini
     
     %% v3.0 Algorithmic Workers (Lazy Loaded)
-    Orchestrator -- conflicts? --> OCC[OCC Validator]
+
     Orchestrator -- debate? --> Consensus[Consensus Engine]
     Orchestrator -- debug? --> SBFL[Ochiai Debugger]
     
@@ -76,7 +76,7 @@ swarm/
 │   ├── orchestrator_loop.py # Main Event Loop
 │   ├── search_engine.py    # Python Search & Indexing
 │   ├── git_worker.py       # Autonomous Version Control
-│   └── algorithms/         # v3.0 Advanced Logic (OCC, Z3, etc.)
+│   └── algorithms/         # v3.2 Advanced Logic (SBFL, Z3, etc.)
 ├── server.py               # FastMCP Server Entrypoint
 ├── Dockerfile              # Python 3.11 Slim Image
 └── project_profile.json    # The Blackboard

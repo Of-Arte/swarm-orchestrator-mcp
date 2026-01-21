@@ -1,8 +1,10 @@
 import logging
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Any
+import asyncio
 from fastmcp import FastMCP
+from mcp_core.postgres_client import PostgreSQLMCPClient
 
 logger = logging.getLogger(__name__)
 
@@ -22,18 +24,18 @@ def register(mcp: FastMCP):
         return _orient_context(session_id)
 
     @mcp.tool()
-    def refresh_memory(session_id: str = None) -> str:
+    async def refresh_memory(session_id: str = None) -> str:
         """
         Consolidate and prune active memory files per skill-memory-refresh.md.
         
         Usage Heuristics:
         - Use when: Too many active task files exist (>10) or at session end.
-        - Effect: Moves completed task insights to archive and deletes raw files.
+        - Effect: Moves completed task insights to archive (SQL) and deletes raw files.
         
         Args:
             session_id: Optional unique identifier for the session.
         """
-        return _refresh_memory(session_id)
+        return await _refresh_memory(session_id)
 
     @mcp.tool()
     def claim_task(session_id: str, task_description: str) -> str:
@@ -47,15 +49,82 @@ def register(mcp: FastMCP):
         return _claim_task(session_id, task_description)
 
     @mcp.tool()
-    def merge_session(session_id: str) -> str:
+    async def merge_session(session_id: str) -> str:
         """
         Syncs completed tasks from Session back to Global Plan and archives session.
         
         Usage Heuristics:
         - Use when: Session goal is complete and verified.
-        - Effect: Updates global plan with completed tasks, archives session memory.
+        - Effect: Updates global plan with completed tasks, archives session memory to SQL.
         """
-        return _merge_session(session_id)
+        return await _merge_session(session_id)
+
+    @mcp.tool()
+    async def diagnose_error(error_msg: str) -> str:
+        """
+        Troubleshoot an error using the PostgreSQL knowledge base.
+        
+        Usage Heuristics:
+        - Use when: A command fails with a cryptic error (EOF, Connection Refused, etc.).
+        - Returns: Potential fixes based on previous sessions.
+        """
+        client = PostgreSQLMCPClient()
+        results = await client.diagnose_error_from_db(error_msg)
+        
+        if not results:
+            return "❌ No matching troubleshooting entries found in PostgreSQL."
+            
+        resp = ["🧠 Found matching troubleshooting entries:"]
+        for res in results:
+            resp.append(f"\n### Pattern: {res['pattern']}\n**Symptom**: {res['symptom']}\n**Recommendation**:\n{res['recommendation']}")
+        
+        return "\n".join(resp)
+
+    @mcp.tool()
+    async def contribute_error_fix(pattern: str, symptom: str, recommendation: str) -> str:
+        """
+        Add a new troubleshooting entry to the PostgreSQL knowledge base.
+        
+        Usage Heuristics:
+        - Use when: You successfully fix a NEW type of error that wasn't in the database.
+        """
+        client = PostgreSQLMCPClient()
+        success = await client.save_error_knowledge(pattern, symptom, recommendation)
+        if success:
+            return f"✅ Contributed fix for pattern: {pattern}"
+        return "❌ Failed to contribute fix."
+
+    @mcp.tool()
+    async def search_archive(query: str, top_k: int = 5) -> str:
+        """
+        Search archived memory using semantic similarity.
+        
+        Usage Heuristics:
+        - Use when: Looking for historical context about a topic (e.g., "authentication refactor").
+        - Returns: Semantically similar archived task summaries.
+        """
+        # Generate embedding for the query
+        from mcp_core.llm import generate_embedding
+        
+        try:
+            query_embedding = await generate_embedding(query)
+        except Exception as e:
+            return f"❌ Failed to generate embedding: {e}"
+        
+        client = PostgreSQLMCPClient()
+        results = await client.search_archived_memory(query_embedding, top_k)
+        
+        if not results:
+            return "❌ No archived memory found."
+            
+        resp = [f"📚 Found {len(results)} archived entries:"]
+        for idx, res in enumerate(results, 1):
+            similarity = res.get('similarity', 0)
+            source = res.get('source_file', 'Unknown')
+            content_preview = res.get('content', '')[:200]
+            resp.append(f"\n### {idx}. {source} (similarity: {similarity:.2f})\n{content_preview}...")
+        
+        return "\n".join(resp)
 
 def _orient_context(session_id: str = None) -> str:
     import shutil
@@ -75,7 +144,7 @@ def _orient_context(session_id: str = None) -> str:
             active_dir.mkdir(parents=True, exist_ok=True)
             
             # Copy global PLAN.md if it exists, else create empty
-            global_plan = swarm_root / "docs" / "ai" / "PLAN.md"
+            global_plan = swarm_root / "docs" / "ai" / "memory" / "active" / "00_MASTER_PLAN.md"
             if global_plan.exists():
                 shutil.copy(global_plan, plan_path)
                 # Store hash for drift detection
@@ -87,7 +156,7 @@ def _orient_context(session_id: str = None) -> str:
             info_header = f"🧠 Swarm Orienting Protocol Results (Session: {session_id}):\n"
         else:
             # Check for Drift
-            global_plan = swarm_root / "docs" / "ai" / "PLAN.md"
+            global_plan = swarm_root / "docs" / "ai" / "memory" / "active" / "00_MASTER_PLAN.md"
             snapshot_hash_file = session_root / "plan_snapshot.hash"
             drift_warning = ""
             
@@ -100,7 +169,7 @@ def _orient_context(session_id: str = None) -> str:
             info_header = f"🧠 Swarm Orienting Protocol Results (Session: {session_id}):{drift_warning}\n"
     else:
         # Global Mode
-        plan_path = swarm_root / "docs" / "ai" / "PLAN.md"
+        plan_path = swarm_root / "docs" / "ai" / "memory" / "active" / "00_MASTER_PLAN.md"
         active_dir = swarm_root / "docs" / "ai" / "memory" / "active"
         info_header = "🧠 Swarm Orienting Protocol Results (Global):\n"
     
@@ -110,7 +179,7 @@ def _orient_context(session_id: str = None) -> str:
     if plan_path.exists():
         plan_content = plan_path.read_text(encoding="utf-8")
         # Extract high-level goals (first 5 lines for conciseness)
-        info.append(f"📍 Roadmap Snapshot ({plan_path.relative_to(swarm_root)}):")
+        info.append(f"📍 Roadmap Snapshot ({plan_path.name}):")
         info.append("\n".join(plan_content.splitlines()[:5]))
         if len(plan_content.splitlines()) > 5:
             info.append("...")
@@ -144,7 +213,7 @@ def _orient_context(session_id: str = None) -> str:
 
 def _claim_task(session_id: str, task_description: str) -> str:
     swarm_root = Path(__file__).parent.parent.parent.parent
-    global_plan = swarm_root / "docs" / "ai" / "PLAN.md"
+    global_plan = swarm_root / "docs" / "ai" / "memory" / "active" / "00_MASTER_PLAN.md"
     
     if not global_plan.exists():
         return "❌ Global PLAN.md not found."
@@ -177,11 +246,12 @@ def _claim_task(session_id: str, task_description: str) -> str:
     
     return f"❌ Task not found in Global Plan: {task_description}"
 
-def _merge_session(session_id: str) -> str:
+async def _merge_session(session_id: str) -> str:
     import shutil
     swarm_root = Path(__file__).parent.parent.parent.parent
     session_root = swarm_root / "docs" / "sessions" / session_id
-    global_plan = swarm_root / "docs" / "ai" / "PLAN.md"
+    global_plan = swarm_root / "docs" / "ai" / "memory" / "active" / "00_MASTER_PLAN.md"
+    updates_count = 0
     
     if not session_root.exists():
          return "❌ Session not found."
@@ -192,7 +262,6 @@ def _merge_session(session_id: str) -> str:
         content = global_plan.read_text(encoding="utf-8")
         lines = content.splitlines()
         updated_lines = []
-        updates_count = 0
         
         for line in lines:
             if f"(claimed by {session_id})" in line:
@@ -203,23 +272,17 @@ def _merge_session(session_id: str) -> str:
             
         global_plan.write_text("\n".join(updated_lines), encoding="utf-8")
     
-    # 2. Archive Session Memory
+    # 2. Archive Session Memory to SQL (replaces markdown copying)
     active_dir = session_root / "memory" / "active"
-    archive_file = swarm_root / "docs" / "ai" / "memory" / "archive" / f"session_{session_id}_summary.md"
     
     if active_dir.exists():
-        summary = _refresh_memory(session_id) # Consolidates to session archive
-        # Move session archive to global archive
-        session_archive = session_root / "memory" / "archive" / "session_summary.md"
-        if session_archive.exists():
-            archive_file.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(session_archive, archive_file)
+        await _refresh_memory(session_id) # Consolidates to SQL archive
     
     # 3. Cleanup Session
     # shutil.rmtree(session_root) # Optional: Decide if we want to keep history? Let's keep for now but maybe rename?
     # For now, just leave it.
     
-    return f"✅ Session merged. {updates_count} tasks marked completed in Global Plan. Memory archived to {archive_file.name}."
+    return f"✅ Session merged. {updates_count} tasks marked completed in Global Plan. Memory archived to SQL."
 
 def _sync_session_plan(session_id: str, global_plan_path: Path):
     """Helper to re-copy global plan to session to keep them in sync after a claim."""
@@ -233,23 +296,26 @@ def _sync_session_plan(session_id: str, global_plan_path: Path):
         plan_hash = hashlib.md5(global_plan_path.read_bytes()).hexdigest()
         (session_root / "plan_snapshot.hash").write_text(plan_hash, encoding="utf-8")
 
-def _refresh_memory(session_id: str = None) -> str:
+async def _refresh_memory(session_id: str = None) -> str:
+    from mcp_core.llm import generate_embedding
+    
     swarm_root = Path(__file__).parent.parent.parent.parent
     
     if session_id:
         base_dir = swarm_root / "docs" / "sessions" / session_id
         active_dir = base_dir / "memory" / "active"
-        archive_path = base_dir / "memory" / "archive" / "session_summary.md"
     else:
         active_dir = swarm_root / "docs" / "ai" / "memory" / "active"
-        archive_path = swarm_root / "docs" / "ai" / "memory" / "archive" / "2026_01_Summary.md"
     
     if not active_dir.exists():
         return f"❌ active/ directory not found at {active_dir}."
         
     active_files = list(active_dir.glob("*.md"))
     to_prune = []
-    summary_entries = []
+    migrated_count = 0
+    errors = []
+    
+    client = PostgreSQLMCPClient()
     
     for f in active_files:
         # Safety guards
@@ -259,20 +325,42 @@ def _refresh_memory(session_id: str = None) -> str:
         content = f.read_text(encoding="utf-8")
         # Check if completed
         if "[x]" in content or "status: completed" in content.lower():
-            # Extract simple summary (first 500 chars)
-            summary_entries.append(f"### {f.name}\n{content[:500]}...\n")
-            to_prune.append(f)
+            try:
+                # Use first 500 chars as summary for embedding
+                embedding_text = content[:500] if len(content) > 500 else content
+                embedding = await generate_embedding(embedding_text)
+                
+                tags = []
+                if session_id:
+                    tags.append(f"session_{session_id}")
+                    tags.append("session_memory")
+                else:
+                    tags.append("global_memory")
+                    
+                # Add tags from filename
+                tags.extend(f.stem.lower().replace("-", "_").replace(" ", "_").split("_"))
+                
+                await client.save_archived_memory(
+                    content=content,
+                    embedding=embedding,
+                    source_file=f.name,
+                    tags=tags
+                )
+                
+                migrated_count += 1
+                to_prune.append(f)
+            except Exception as e:
+                errors.append(f"Failed to archive {f.name}: {e}")
             
-    if not summary_entries:
+    if not to_prune and not errors:
         return "✅ No completed tasks found to refresh."
         
-    # Append to archive
-    archive_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(archive_path, "a", encoding="utf-8") as a:
-        a.write("\n" + "\n".join(summary_entries))
-        
-    # Prune
+    # Prune successfully migrated files
     for f in to_prune:
         f.unlink()
+    
+    msg = f"📦 Memory Refreshed: Archived {migrated_count} active tasks to PostgreSQL and pruned them."
+    if errors:
+        msg += f"\nNote: {len(errors)} errors occurred: {'; '.join(errors[:3])}"
         
-    return f"📦 Memory Refreshed: Consolidated {len(summary_entries)} files into {archive_path.name} and pruned them."
+    return msg

@@ -36,7 +36,7 @@ retrieve_context("authentication dependencies")
 
 # Step 3: Process refactoring task
 process_task("Refactor auth.py to use async/await with proper error handling")
-# → Routes to OCC Validator
+# → Routes to General Worker
 # → Detects conflicts
 # → Provides safe refactoring guidance
 
@@ -171,7 +171,7 @@ retrieve_context("API routing architecture")
 
 # Step 3: Process integration task
 process_task("Add new /api/users endpoint with authentication and validation")
-# → Routes to OCC Validator
+# → Routes to General Worker
 # → Ensures no conflicts with existing routes
 # → Provides implementation guidance
 ```
@@ -211,7 +211,7 @@ retrieve_context("database access patterns")
 
 # Step 3: Process migration
 process_task("Migrate all database calls in models.py to async/await pattern")
-# → Routes to OCC Validator
+# → Routes to General Worker
 # → Detects concurrent access issues
 # → Provides safe migration path
 ```

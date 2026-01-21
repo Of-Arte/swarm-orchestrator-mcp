@@ -26,4 +26,4 @@ When `active/` exceeds 10 files:
 
 ## Permanent Files (Never Delete)
 - `00_MASTER_PLAN.md`: Strategic roadmap.
-- `00_ERROR_LOG.md`: Error knowledge base.
+- `PostgreSQL Error Knowledge`: Database-backed diagnostic knowledge base accessible via `diagnose_error`.

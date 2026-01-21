@@ -82,7 +82,7 @@ result = deliberate(problem="...", return_json=True)
 | Step | Name | Worker | Purpose |
 |------|------|--------|---------|
 | 1 | Decompose | HippoRAG | Break problem into sub-problems |
-| 2 | Analyze | Auto-routed | Route to OCC/SBFL/Z3 based on keywords |
+| 2 | Analyze | Auto-routed | Route to SBFL/Z3 based on keywords |
 | 3 | Synthesize | LLM | Combine worker outputs |
 | 4+ | Optional | Custom | Extended analysis |
 

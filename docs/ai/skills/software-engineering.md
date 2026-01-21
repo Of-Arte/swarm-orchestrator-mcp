@@ -81,3 +81,7 @@ Reason: Need security review before implementing authentication
 
 - Follow Conventional Commits.
 - Use atomic commits for Red, Green, and Refactor steps if possible.
+- **Branch Targeting**:
+  - Feature/fix branches should create PRs targeting `dev` (default)
+  - Release promotion: create PR from `dev` to `main`
+  - The `main` branch represents stable production releases

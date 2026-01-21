@@ -36,3 +36,8 @@ Create a self-organizing, autonomous "Swarm" of AI agents capable of maintaining
 ## 📝 Active Constraints
 1.  **Duplicate Storage**: Do NOT duplicate artifacts. Synthesis only.
 2.  **Server Config**: Must use `127.0.0.1` for MCP connectivity on Windows.
+
+- [/] New Test Task (claimed by test_verification_session)
+- [ ] Surprise Task
+- [ ] New Test Task
+- [ ] New Test Task
