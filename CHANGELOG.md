@@ -2,6 +2,29 @@
 
 All notable changes to Project Swarm will be documented in this file.
 
+## [3.3.0] - 2026-01-21
+
+### 🤖 Autonomous Git Engine
+- **Multi-Role Agent System**: Rebuilt the Git system from a single worker into five specialized autonomous roles (Feature Scout, Code Auditor, Issue Triage, Branch Manager, and Project Lifecycle).
+- **Prompt Engineering**: Introduced `git-worker-agent.md` skill with formal handoff protocols and exit reports.
+- **Reliability**: Implemented comprehensive unit test suite in `tests/algorithms/test_git_worker.py`.
+
+### 🧬 Strategic State Management
+- **Roadmap Automation**: Integrated `docs/PLAN.md` with the orchestrator loop for bi-directional status synchronization.
+- **Pydantic Migration**: Standardized `project_profile.json` structure using strictly-typed models.
+- **Concurrency**: Replaced legacy mechanisms with cross-platform `filelock` for process-safe blackboard operations.
+
+### 🎯 Output Verbosity Optimization
+- **Deliberate Tool**: Changed default output from verbose JSON (~2000 chars) to concise Markdown summaries (~200 chars)
+  - Agents now see: `✅ Deliberation Complete (Confidence: 0.95) | Result: [answer] | (3 steps executed)`
+  - Full audit trails preserved in server logs via `logger.info()` and `logger.debug()`
+  - Backward compatible: `return_json=True` still available for verbose output
+  - **Impact**: ~10x reduction in agent context pollution while maintaining operator visibility
+- **Index Persistence**: Verified `CodebaseIndexer.load_cache()` ensures index survives server restarts
+- **Test Coverage**: Added `tests/test_deliberate_verbosity.py` to verify concise output defaults
+
+---
+
 ## [3.1.0] - 2026-01-19
 
 ### Enhanced

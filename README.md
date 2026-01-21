@@ -116,10 +116,11 @@ flowchart LR
 <td width="50%">
 
 ### 🧠 **Algorithmic Intelligence**
-- **HippoRAG**: AST-based knowledge graphs with Personalized PageRank
-- **Ochiai SBFL**: Statistical fault localization for debugging
-- **Z3 Verifier**: Formal verification using SMT solving
-- **CRDT Merger**: Conflict-Free Replicated Data Types
+- **Autonomous Git Engine**: Multi-role autonomous repository management.
+- **HippoRAG**: AST-based knowledge graphs with Personalized PageRank.
+- **Ochiai SBFL**: Statistical fault localization for debugging.
+- **Z3 Verifier**: Formal verification using SMT solving.
+- **CRDT Merger**: Conflict-Free Replicated Data Types.
 
 </td>
 <td width="50%">
@@ -136,11 +137,10 @@ flowchart LR
 
 ### 📊 Swarm vs Standard MCP Servers
 
-| Feature | Standard MCP | Swarm MCP |
-|---------|-------------|-----------|
 | **Search Method** | Basic keyword/regex | Hybrid semantic + keyword with auto-optimization |
 | **Code Understanding** | Text parsing | AST-based knowledge graphs with PageRank |
 | **Debugging** | Stack trace reading | Statistical fault localization (Ochiai) |
+| **Version Control** | Basic git tools | Autonomous multi-role Git engine |
 | **Language Support** | Single or limited | Python, JavaScript, TypeScript (extensible) |
 | **Memory Management** | Stateless | Rolling memory with active/archive tiers |
 | **Verification** | None | Z3 SMT solver integration |

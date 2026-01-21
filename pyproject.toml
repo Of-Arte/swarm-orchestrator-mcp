@@ -38,6 +38,8 @@ treesitter = [
 ]
 dev = [
     "pytest-cov",
+    "anyio",
+    "pytest-asyncio",
     "black",
     "isort"
 ]

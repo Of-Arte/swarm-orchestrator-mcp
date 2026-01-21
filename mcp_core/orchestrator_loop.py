@@ -21,6 +21,7 @@ from mcp_core.algorithms import (
     Z3Verifier, OchiaiLocalizer, GitWorker,
     ContextPruner
 )
+from mcp_core.github_mcp_client import GitHubMCPClient
 from mcp_core.sync.sync_engine import SyncEngine
 from mcp_core.telemetry.collector import collector
 
@@ -55,6 +56,8 @@ class Orchestrator:
         self._sbfl = None
         self._sbfl = None
         self._git = None
+        self._git_dispatcher = None
+        self._github_client = None
         self._sync = None
         self._pruner = None
         
@@ -81,6 +84,32 @@ class Orchestrator:
                 logging.warning(f"GitWorker unavailable: {e}")
                 self._git = None
         return self._git
+
+    @property
+    def git_dispatcher(self):
+        """Lazy init GitRoleDispatcher"""
+        if self._git_dispatcher is None:
+            from mcp_core.algorithms.git_role_dispatcher import GitRoleDispatcher
+            self._git_dispatcher = GitRoleDispatcher(self)
+            logging.info("✅ GitRoleDispatcher initialized")
+        return self._git_dispatcher
+
+    @property
+    def github_client(self):
+        """Lazy init GitHub MCP client"""
+        if self._github_client is None:
+            if not os.getenv("GITHUB_TOKEN"):
+                logging.warning("GITHUB_TOKEN not set - GitHub operations limited")
+                return None
+            
+            try:
+                # Initialize our wrapper client
+                self._github_client = GitHubMCPClient()
+                logging.info("✅ GitHubMCPClient initialized")
+            except Exception as e:
+                logging.error(f"Failed to init GitHub client: {e}")
+                self._github_client = None
+        return self._github_client
 
     @property
     def rag(self):
@@ -356,14 +385,17 @@ class Orchestrator:
             chunks = self.rag.retrieve_context(task.description, top_k=5)
             
             # Add context to task feedback
-            context_summary = "\n".join([
-                f"- {c.node_name} ({c.file_path}:{c.start_line})"
-                for c in chunks
-            ])
-            task.feedback_log.append(f"HippoRAG Context:\n{context_summary}")
-            
-            logging.info(f"✅ Retrieved {len(chunks)} context chunks")
-            return True
+            if chunks:
+                context_summary = "\n".join([f"  • {c.file_path}:{c.start_line}" for c in chunks[:3]])
+                if len(chunks) > 3:
+                    context_summary += f"\n  ...and {len(chunks)-3} more chunks."
+                task.feedback_log.append(f"HippoRAG Context (Summary):\n{context_summary}")
+                
+                logging.info(f"✅ Retrieved {len(chunks)} context chunks")
+                return True
+            else:
+                task.feedback_log.append("HippoRAG: No relevant context found.")
+                return True
             
         except Exception as e:
             logging.error(f"HippoRAG failed: {e}")
@@ -463,15 +495,32 @@ class Orchestrator:
         """
         Orchestrate Git worker team for autonomous repository maintenance.
         
-        Workflow:
-        1. Branch (if git_branch_name specified)
-        2. Commit (if git_commit_ready)
-        3. Push (if git_auto_push)
         4. PR (if git_create_pr OR auto-PR for completed feature tasks)
         """
         if not self.git.is_available():
             task.feedback_log.append("Git: Not available")
             return False
+            
+        # [v3.3: Role-based Dispatch]
+        role_triggered = any([
+            task.feature_discovery,
+            task.code_audit,
+            task.issue_triage_needed,
+            task.project_bootstrap
+        ])
+        
+        if role_triggered:
+            try:
+                reports = self.git_dispatcher.dispatch(task)
+                for report in reports:
+                    task.feedback_log.append(f"🤖 GitRole({task.task_id[:4]}): {report.status}")
+                    if report.remaining_work:
+                        task.feedback_log.append(f"   ↳ {report.remaining_work}")
+                return True
+            except Exception as e:
+                logging.error(f"GitRole dispatch failed: {e}")
+                task.feedback_log.append(f"⚠️ GitRole Error: {e}")
+                return False
         
         try:
             from mcp_core.worker_prompts import prompt_git_branch, prompt_git_commit, prompt_git_pr
@@ -550,7 +599,10 @@ class Orchestrator:
                                    )
                                    self.state.provenance_log.append(sig)
                            
-                           task.feedback_log.append(f"💾 Commit Worker Log:\n" + "\n".join(execution_log))
+                           exec_summary = "\n".join(execution_log)
+                           if len(exec_summary) > 300:
+                               exec_summary = exec_summary[:300] + "..."
+                           task.feedback_log.append(f"💾 Commit Worker Log:\n{exec_summary}")
                            
                            # Add push confirmation prompt
                            # task.feedback_log.append(
@@ -651,11 +703,16 @@ class Orchestrator:
                     logging.info(f"🔀 Generating PR with {git_model}...")
                     response = generate_response(pr_prompt, model_alias=git_model)
                     
+                    # [v3.5] Trim reasoning trace for feedback log
+                    trace = response.reasoning_trace
+                    if len(trace) > 200:
+                        trace = trace[:200] + "..."
+                    
                     if response.tool_calls:
                        calls_str = "\n".join([f"{t.function}({t.arguments})" for t in response.tool_calls])
                        task.feedback_log.append(f"🔀 PR Worker ({git_model}):\n{calls_str}")
                     else:
-                       task.feedback_log.append(f"🔀 PR Worker ({git_model}):\n{response.reasoning_trace}")
+                       task.feedback_log.append(f"🔀 PR Worker ({git_model}):\n{trace}")
                        
                 except Exception as e:
                     logging.error(f"PR Generation Failed: {e}")

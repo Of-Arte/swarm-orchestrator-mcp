@@ -1,6 +1,6 @@
 # Architecture
 
-Project Swarm v3.1 is a Python-native, "Gemini-First" autonomous AI development orchestrator. It unifies state management, algorithmic reasoning, and MCP-based tool execution into a single, cohesive system.
+Project Swarm v3.3 is a Python-native, "Gemini-First" autonomous AI development orchestrator. It unifies state management, algorithmic reasoning, and a multi-role autonomous Git engine into a single, cohesive system.
 
 ## System Overview
 
@@ -38,27 +38,34 @@ Located in `mcp_core/orchestrator_loop.py`.
     - **Local**: `ollama/llama3` (optional)
 
 ### 2. The Blackboard (State)
-- **Primary State**: `project_profile.json`
-- **Concurrency**: `FileLock` ensures thread-safe writes between the SSE server and background workers.
-- **Persistence**: File-system based JSON storage, ready for SQLite/WAL migration.
+- **Primary State**: `project_profile.json`, managed via **Pydantic** models in `mcp_core/swarm_schemas.py`.
+- **Concurrency**: Cross-platform **FileLock** ensures thread-safe and process-safe writes between agents and the orchestrator.
+- **Persistence**: File-system based JSON storage with atomic write validation.
+- **Strategic State**: Bi-directional sync with `docs/PLAN.md` and `issues.md` for human-readable roadmaps.
 
 ### 3. Native Gemini Integration
 - **Inference**: Direct gRPC/REST calls for high-speed reasoning.
 - **Embeddings**: `models/text-embedding-004` powers the search engine.
 - **Context**: 1M+ token window utilized for full-file analysis and HippoRAG graph construction.
 
-### 4. Autonomous Workers
-- **Git Worker**: Monitors file system events, generates semantic commits, and manages PR lifecycles.
-- **Search Engine**: Pure Python implementation combining Keyword (BM25-like) and Semantic (Gemini Embeddings) search.
+### 4. Autonomous Git Engine
+Swarm v3.3 introduces a multi-role Git system designed for high-autonomy workflows.
+- **Roles**:
+    - **Feature Scout**: Scans codebase for expansion opportunities.
+    - **Code Auditor**: Identifies bugs and documentation drift.
+    - **Issue Triage**: Prioritizes and assigns tasks from the backlog.
+    - **Branch Manager**: Manages merging and stacked PR chains.
+    - **Project Lifecycle**: Orchestrates repository creation and bootstrapping.
+- **Integrations**: Uses `git-mcp` for local operations and `github-mcp` for remote PR management.
 
 ## Data Flow
 
-### Example: Autonomous Git Commit
-1. **Event**: User saves a file.
-2. **Detection**: `GitWorker` notes the dirty state.
-3. **Reasoning**: Routes diff to `gemini-3-flash-preview` for "Git Writer" role.
-4. **Action**: Generates conventional commit message.
-5. **Execution**: Commits changes via `subprocess` (if auto-commit enabled).
+### Example: Autonomous Handoff Flow
+1. **Scout**: `Feature Scout` identifies a missing telemetry feature and creates a task.
+2. **Orchestrator**: Updates `project_profile.json` and assigns to the `Engineer`.
+3. **Execution**: `Engineer` creates a branch (e.g., `feat/provenance`), applies edits, and runs tests.
+4. **Audit**: `Code Auditor` scans the branch for bugs and documentation drift.
+5. **Manager**: `Branch Manager` opens a PR and monitors for CI/approval.
 
 ## File Structure
 

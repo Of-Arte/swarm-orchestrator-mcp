@@ -277,18 +277,18 @@ class JavaScriptParser(TreeSitterParser):
         path_str = str(path).replace('\\', '/')
         
         # Pages Router
-        if '/pages/' in path_str:
+        if 'pages/' in path_str or '/pages/' in path_str:
             if path.name == '_app.tsx' or path.name == '_app.jsx':
                 return 'next_app'
             elif path.name == '_document.tsx' or path.name == '_document.jsx':
                 return 'next_document'
-            elif '/api/' in path_str:
+            elif 'api/' in path_str or '/api/' in path_str:
                 return 'next_api_route'
             else:
                 return 'next_page'
         
         # App Router (Next.js 13+)
-        if '/app/' in path_str:
+        if 'app/' in path_str or '/app/' in path_str:
             if path.name in ['layout.tsx', 'layout.jsx']:
                 return 'next_layout'
             elif path.name in ['page.tsx', 'page.jsx']:

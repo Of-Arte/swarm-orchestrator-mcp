@@ -21,6 +21,17 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+def _get_pycrdt_version_tuple():
+    try:
+        import pycrdt
+        v = getattr(pycrdt, "__version__", "0.0.0")
+        return tuple(map(int, v.split('.')[:3]))
+    except (ImportError, ValueError):
+        return (0, 0, 0)
+
+_PYCRDT_VERSION_TUPLE = _get_pycrdt_version_tuple()
+_IS_PYCRDT_NEW = _PYCRDT_VERSION_TUPLE >= (0, 12, 0)
+
 
 @dataclass
 class CRDTDocument:
@@ -89,7 +100,10 @@ class CRDTMerger:
         
         # Apply the update to the document
         # pycrdt handles merging automatically via YATA
-        pycrdt.apply_update(crdt_doc.doc, update)
+        if _IS_PYCRDT_NEW:
+            crdt_doc.doc.apply_update(update)
+        else:
+            pycrdt.apply_update(crdt_doc.doc, update)
         
         logger.debug(f"Applied update to {doc_id}: {len(update)} bytes")
     
@@ -124,10 +138,13 @@ class CRDTMerger:
         
         crdt_doc = self.documents[doc_id]
         
-        # Get state vector (represents current version)
-        state_vector = pycrdt.encode_state_as_update(crdt_doc.doc)
+        # Get update representing current state
+        if _IS_PYCRDT_NEW:
+            update = crdt_doc.doc.get_update()
+        else:
+            update = pycrdt.encode_state_as_update(crdt_doc.doc)
         
-        return state_vector
+        return update
     
     def insert_text(
         self,
@@ -152,13 +169,19 @@ class CRDTMerger:
         crdt_doc = self.documents[doc_id]
         
         # Record state before change
-        before_state = pycrdt.encode_state_vector(crdt_doc.doc)
+        if _IS_PYCRDT_NEW:
+            before_state = crdt_doc.doc.get_state()
+        else:
+            before_state = pycrdt.encode_state_vector(crdt_doc.doc)
         
         # Insert text
         crdt_doc.text[position:position] = text
         
         # Get diff since before_state
-        update = pycrdt.encode_state_as_update(crdt_doc.doc, before_state)
+        if _IS_PYCRDT_NEW:
+            update = crdt_doc.doc.get_update(before_state)
+        else:
+            update = pycrdt.encode_state_as_update(crdt_doc.doc, before_state)
         
         logger.debug(f"Inserted {len(text)} chars at pos {position} in {doc_id}")
         
@@ -187,13 +210,19 @@ class CRDTMerger:
         crdt_doc = self.documents[doc_id]
         
         # Record state before change
-        before_state = pycrdt.encode_state_vector(crdt_doc.doc)
+        if _IS_PYCRDT_NEW:
+            before_state = crdt_doc.doc.get_state()
+        else:
+            before_state = pycrdt.encode_state_vector(crdt_doc.doc)
         
         # Delete range
         del crdt_doc.text[start:end]
         
         # Get diff since before_state
-        update = pycrdt.encode_state_as_update(crdt_doc.doc, before_state)
+        if _IS_PYCRDT_NEW:
+            update = crdt_doc.doc.get_update(before_state)
+        else:
+            update = pycrdt.encode_state_as_update(crdt_doc.doc, before_state)
         
         logger.debug(f"Deleted chars [{start}:{end}] in {doc_id}")
         
@@ -218,7 +247,10 @@ class CRDTMerger:
         
         # Get total number of structural updates
         # This reflects the collaborative editing history
-        return len(pycrdt.encode_state_as_update(crdt_doc.doc))
+        if _IS_PYCRDT_NEW:
+            return len(crdt_doc.doc.get_update())
+        else:
+            return len(pycrdt.encode_state_as_update(crdt_doc.doc))
     
     def destroy_document(self, doc_id: str) -> None:
         """

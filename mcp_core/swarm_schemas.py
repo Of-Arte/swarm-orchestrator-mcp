@@ -113,6 +113,12 @@ class Task(BaseModel):
     git_pr_title: Optional[str] = Field(default=None, description="PR title")
     git_pr_body: Optional[str] = Field(default=None, description="PR description")
 
+    # [v3.3: GitWorker Role Flags]
+    feature_discovery: bool = Field(default=False, description="Trigger FeatureScoutRole")
+    code_audit: bool = Field(default=False, description="Trigger CodeAuditorRole")
+    issue_triage_needed: bool = Field(default=False, description="Trigger IssueTriageRole")
+    project_bootstrap: bool = Field(default=False, description="Trigger ProjectLifecycleRole (start)")
+
     feedback_log: List[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)

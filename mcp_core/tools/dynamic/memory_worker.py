@@ -109,18 +109,23 @@ def _orient_context(session_id: str = None) -> str:
     # 1. Load Roadmap
     if plan_path.exists():
         plan_content = plan_path.read_text(encoding="utf-8")
-        # Extract high-level goals (first 20 lines)
-        info.append(f"📍 Current Roadmap ({plan_path.relative_to(swarm_root)}):")
-        info.append("\n".join(plan_content.splitlines()[:20]))
-        info.append("...\n")
+        # Extract high-level goals (first 5 lines for conciseness)
+        info.append(f"📍 Roadmap Snapshot ({plan_path.relative_to(swarm_root)}):")
+        info.append("\n".join(plan_content.splitlines()[:5]))
+        if len(plan_content.splitlines()) > 5:
+            info.append("...")
+        info.append("")
     else:
         info.append("⚠️ PLAN.md not found.")
         
     # 2. Identify Active Tasks
     if active_dir.exists():
         active_files = list(active_dir.glob("*.md"))
-        info.append(f"🔥 Active Task Files ({len(active_files)} found):")
-        for f in active_files:
+        limit = 15
+        info.append(f"🔥 Active Task Files ({len(active_files)} total):")
+        
+        display_files = active_files[:limit]
+        for f in display_files:
             # Get the first line/title
             first_line = "No title"
             try:
@@ -128,7 +133,10 @@ def _orient_context(session_id: str = None) -> str:
                     first_line = f_obj.readline().strip().replace("# ", "")
             except Exception:
                 pass
-            info.append(f"  • {f.name}: {first_line}")
+            info.append(f"  • {f.name}: {first_line[:50]}...")
+            
+        if len(active_files) > limit:
+            info.append(f"  ...and {len(active_files) - limit} more.")
     else:
         info.append("ℹ️ No active/ directory found.")
         

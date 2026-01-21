@@ -12,7 +12,7 @@ from mcp_core.tools.dynamic import memory_worker
 # Setup Test Environment
 TEST_SESSION_ID = "test_verification_session"
 SESSION_ROOT = SWARM_ROOT / "docs" / "sessions" / TEST_SESSION_ID
-GLOBAL_PLAN = SWARM_ROOT / "docs" / "ai" / "PLAN.md"
+GLOBAL_PLAN = SWARM_ROOT / "docs" / "ai" / "memory" / "active" / "00_MASTER_PLAN.md"
 
 def setup():
     if SESSION_ROOT.exists():
@@ -23,6 +23,7 @@ def teardown():
         shutil.rmtree(SESSION_ROOT)
     pass # Keep artifacts for inspection if needed, or uncomment above to clean
 
+@pytest.mark.anyio
 def test_isolation():
     print("🔍 Testing Memory Isolation...")
     

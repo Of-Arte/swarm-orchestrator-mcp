@@ -124,6 +124,22 @@ class ParserRegistry:
             registered.append("TypeScript")
         except ImportError:
             logger.debug("Tree-sitter-typescript not installed, skipping")
+        
+        # Try Rust
+        try:
+            from mcp_core.algorithms.parsers.rust_parser import RustParser
+            self.register(RustParser())
+            registered.append("Rust")
+        except ImportError:
+            logger.debug("Tree-sitter-rust not installed, skipping")
+        
+        # Try Go
+        try:
+            from mcp_core.algorithms.parsers.go_parser import GoParser
+            self.register(GoParser())
+            registered.append("Go")
+        except ImportError:
+            logger.debug("Tree-sitter-go not installed, skipping")
             
         self._treesitter_attempted = True
         
@@ -132,8 +148,9 @@ class ParserRegistry:
         else:
             logger.debug(
                 "No optional language parsers loaded. "
-                "Install tree-sitter packages for JS/TS support."
+                "Install tree-sitter packages for JS/TS/Rust/Go support."
             )
+
 
     def _try_register_treesitter_parsers(self) -> None:
         """Deprecated alias for register_optional_parsers."""

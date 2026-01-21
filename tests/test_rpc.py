@@ -1,7 +1,6 @@
-import asyncio
-import httpx
-import json
+import pytest
 
+@pytest.mark.anyio
 async def test_rpc():
     # FastMCP uses a specific protocol over SSE, but we can also hit the 'tools/call' endpoint 
     # if it's exposed, OR we just verify the /sse endpoint handshake.

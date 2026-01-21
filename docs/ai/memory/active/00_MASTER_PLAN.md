@@ -13,8 +13,14 @@ Create a self-organizing, autonomous "Swarm" of AI agents capable of maintaining
 - [x] **Knowledge Graph Visualization**: Force-directed graph for HippoRAG context.
 - [x] **Memory Inspector**: Provenance log and stack identity.
 - [x] **Demo Mode**: Fallback mock data and architecture diagrams.
+- [x] **Autonomous Git Engine**: Multi-role system (Scout, Auditor, Triage, Manager, Lifecycle) with orchestrator integration.
 
-### Phase 4: Future Horizons (Backlog)
+### Phase 4: Dynamic Tooling & Debug (Completed)
+- [x] **Dynamic Tool Loader**: Load MCP tools at runtime.
+- [x] **Multiplexed Terminal**: Interactive terminal sessions.
+- [x] **Transport Debugger**: SSE/Stdio connectivity probes.
+
+### Phase 5: Future Horizons (Backlog)
 - [ ] **Multi-Language Support**: Add Tree-sitter parsers for Rust, Go, and Java to HippoRAG.
 - [ ] **Advanced Verification**: Integrate `Z3` SMT solver for formal logic verification.
 - [ ] **Collaborative Swarm**: Enable Swarm-to-Swarm communication protocol.

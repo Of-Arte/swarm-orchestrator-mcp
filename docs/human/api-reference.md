@@ -156,17 +156,23 @@ Get current status of all tasks in the Swarm blackboard.
 
 **Signature:**
 ```python
-def get_status() -> str
+def get_status(limit: int = 10, show_all: bool = False) -> str
 ```
 
-**Returns:** Formatted list of all tasks with their current status
+**Parameters:**
+- `limit` (int, optional): Max number of tasks to return (default: 10)
+- `show_all` (bool, optional): If true, ignore limit and show all tasks
+
+**Returns:** Formatted list of tasks with their current status
 
 **Example:**
 ```python
 get_status()
-# → 📋 Swarm Blackboard Status:
+# → 📋 Swarm Blackboard Status (Showing last 10 of 42 tasks):
 #   • 3f2a1b4c: [COMPLETED] Refactor auth.py...
 #   • 7d8e9f0a: [PENDING] Debug test_login...
+#
+# ...and 32 older tasks (use show_all=True to see all).
 ```
 
 ---
