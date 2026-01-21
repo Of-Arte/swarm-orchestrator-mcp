@@ -297,6 +297,16 @@ class Orchestrator:
         worker_prompt = ""
         worker_model = self.state.worker_models.get("default", "gemini-pro")
 
+<<<<<<< HEAD
+        if "plan" in task.description.lower():
+            worker_model = self.state.worker_models.get("architect", worker_model)
+            worker_prompt = prompt_architect(task, context_slice, contributing_model=worker_model)
+        elif "audit" in task.description.lower():
+            worker_model = self.state.worker_models.get("auditor", worker_model)
+            worker_prompt = prompt_auditor(task, git_context, contributing_model=worker_model)
+        else:
+            worker_model = self.state.worker_models.get("engineer", worker_model)
+=======
         # [Phase 2] Respect assigned_worker from Task schema first
         role = None
         if task.assigned_worker:
@@ -325,6 +335,7 @@ class Orchestrator:
         elif role == "researcher":
             worker_prompt = prompt_researcher(task, context_slice, contributing_model=worker_model)
         else:  # engineer (default)
+>>>>>>> origin/dev
             worker_prompt = prompt_engineer(task, context_slice, git_context, contributing_model=worker_model)
 
         logging.info(f"Dispatching task {task_id[:8]}...")
