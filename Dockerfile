@@ -12,9 +12,8 @@ RUN git config --global user.name "Swarm Bot" && \
     git config --global user.email "bot@swarm-mcp.dev"
 
 # Install Python dependencies
-# Note: z3-solver and other wheels are installed here
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml README.md ./
+RUN pip install --no-cache-dir .
 
 # Copy the application
 COPY . .

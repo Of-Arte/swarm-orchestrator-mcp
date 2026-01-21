@@ -14,6 +14,7 @@ from mcp_core.algorithms.debate_engine import DebateEngine, DebateState, Critiqu
 from mcp_core.algorithms.z3_verifier import Z3Verifier, VerificationResult
 from mcp_core.algorithms.ochiai_localizer import OchiaiLocalizer, CoverageSpectrum
 from mcp_core.algorithms.git_worker import GitWorker
+from mcp_core.algorithms.context_pruner import ContextPruner
 
 # Parser infrastructure (for multi-language support)
 from mcp_core.algorithms.parsers import (
@@ -38,6 +39,7 @@ __all__ = [
     "OchiaiLocalizer",
     "CoverageSpectrum",
     "GitWorker",
+    "ContextPruner",
     # Parser infrastructure
     "LanguageParser",
     "ASTNode",

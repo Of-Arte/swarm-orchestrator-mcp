@@ -208,7 +208,7 @@ def deliberate(
     context: str = "",
     constraints: list[str] = None,
     steps: int = 3,
-    return_json: bool = True
+    return_json: bool = False
 ) -> str:
     """
     Structured multi-step deliberation using algorithmic workers.
@@ -256,10 +256,10 @@ def deliberate(
         context: Optional context (code, docs, or prior analysis)
         constraints: Hard constraints that must be satisfied
         steps: Number of deliberation steps (1-5, default 3)
-        return_json: Return structured JSON (default) or Markdown summary
+        return_json: Return full JSON trace (default False for concise output)
     
     Returns:
-        Deliberation result with steps, workers used, and final answer
+        Concise summary by default, or full JSON trace if return_json=True
     """
     if constraints is None:
         constraints = []
@@ -272,27 +272,30 @@ def deliberate(
         orch = get_orchestrator()
         result = orch.run_deliberation(problem, context, constraints, steps)
         
+        # Log full trace to server logs (for operator visibility)
+        logger.info(f"🧠 Deliberation Complete: {result.task_id}")
+        logger.info(f"   Problem: {problem[:100]}...")
+        logger.info(f"   Steps: {len(result.steps)}")
+        logger.info(f"   Confidence: {result.confidence:.2f}")
+        logger.info(f"   Final Answer: {result.final_answer[:200]}...")
+        
+        # Log full JSON to file for audit
+        import json
+        logger.debug(f"Full Deliberation Result: {json.dumps(result.model_dump(), indent=2)}")
+        
         if return_json:
-            # Return as JSON
+            # Return full JSON (verbose mode)
             return result.model_dump_json(indent=2)
         else:
-            # Return as Markdown
-            steps_md = "\n".join([
-                f"### Step {s.step}: {s.name} ({s.worker})\n{s.output}\n"
-                for s in result.steps
-            ])
+            # Return concise Markdown summary (default, agent-friendly)
+            steps_summary = f"{len(result.steps)} steps executed"
+            workers_used = set(s.worker for s in result.steps)
             
-            return f"""# Deliberation Result
+            return f"""✅ **Deliberation Complete** (Confidence: {result.confidence:.2f})
 
-**Problem**: {result.problem}
-**Confidence**: {result.confidence:.2f}
+**Result**: {result.final_answer}
 
-## Steps
-{steps_md}
-
-## Final Answer
-{result.final_answer}
-"""
+*({steps_summary} using {', '.join(workers_used)}. Full trace in server logs.)*"""
     
     except Exception as e:
         logger.error(f"Deliberation error: {e}")
@@ -303,7 +306,7 @@ def deliberate(
 
 @mcp.tool()
 @collector.track_tool("get_status")
-def get_status() -> str:
+def get_status(limit: int = 10, show_all: bool = False) -> str:
     """
     Get the current status of all tasks in the Swarm blackboard.
     
@@ -328,8 +331,12 @@ def get_status() -> str:
     - ⚠️ Do NOT poll this in a loose loop. Use it only when checking specific task progress.
     - Swarm functions asynchronously; wait a few seconds before checking status after submission.
     
+    Args:
+        limit: Max number of tasks to return (default: 10).
+        show_all: If true, ignore limit and show all tasks.
+        
     Returns:
-        Formatted list of all tasks with their current status
+        Formatted list of tasks with their current status
     """
     try:
         orch = get_orchestrator()
@@ -338,10 +345,25 @@ def get_status() -> str:
         if not orch.state.tasks:
             return "📋 No tasks found in the blackboard."
         
-        status_lines = ["📋 Swarm Blackboard Status:\n"]
-        for task_id, task in orch.state.tasks.items():
+        all_tasks = sorted(orch.state.tasks.items(), key=lambda x: x[1].task_id, reverse=True)
+        total_count = len(all_tasks)
+        
+        if not show_all and total_count > limit:
+            display_tasks = all_tasks[:limit]
+            header = f"📋 Swarm Blackboard Status (Showing last {limit} of {total_count} tasks):\n"
+            footer = f"\n...and {total_count - limit} older tasks (use show_all=True to see all)."
+        else:
+            display_tasks = all_tasks
+            header = f"📋 Swarm Blackboard Status ({total_count} tasks):\n"
+            footer = ""
+            
+        status_lines = [header]
+        for task_id, task in display_tasks:
             status_lines.append(f"  • {task_id[:8]}: [{task.status}] {task.description[:50]}...")
         
+        if footer:
+            status_lines.append(footer)
+            
         return "\n".join(status_lines)
         
     except Exception as e:

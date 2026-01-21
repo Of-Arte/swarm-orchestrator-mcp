@@ -7,8 +7,9 @@ Builds knowledge graphs from AST and uses PPR for deep context retrieval.
 Supports multiple languages via parser plugins:
 - Python (built-in ast module, always available)
 - JavaScript/TypeScript (optional tree-sitter packages)
-- Future: Go, Rust, Java via same plugin system
+- Rust, Go (optional tree-sitter packages)
 """
+
 
 import logging
 from pathlib import Path

@@ -3,33 +3,34 @@ import os
 from pathlib import Path
 from mcp_core.search_engine import CodebaseIndexer, HybridSearch, IndexConfig
 
+
 def benchmark():
     root = "."
     query = "FastMCP"
     
     print(f"🚀 Benchmarking Search for: '{query}'")
     print("-" * 40)
-    
+
     # 1. Setup Swarm Search
     config = IndexConfig(root_path=root)
     indexer = CodebaseIndexer(config)
-    
+
     # Measure Load Time
     start_load = time.perf_counter()
     loaded = indexer.load_cache()
     end_load = time.perf_counter()
-    
+
     if not loaded:
         print("❌ Cache not found. Please index first.")
         return
-        
+
     searcher = HybridSearch(indexer)
-    
+
     # Measure Swarm Keyword Search (Weighted)
     swarm_times = []
     for _ in range(10):
         start = time.perf_counter()
-        results = searcher.keyword_search(query, top_k=5)
+        searcher.keyword_search(query, top_k=5)
         swarm_times.append(time.perf_counter() - start)
     
     avg_swarm = sum(swarm_times) / len(swarm_times)

@@ -39,8 +39,9 @@ class PythonParser(LanguageParser):
         """
         try:
             tree = ast.parse(source, filename=file_path)
-        except SyntaxError as e:
-            raise SyntaxError(f"Failed to parse {file_path}: {e}") from e
+        except SyntaxError:
+            # Re-raise original SyntaxError to maintain line/column info for tests
+            raise
         
         nodes = []
         

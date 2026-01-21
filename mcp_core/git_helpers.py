@@ -66,13 +66,14 @@ def infer_scope(task: Task) -> str:
     return "core"
 
 
-def format_commit_message(task: Task, include_emoji: bool = False) -> str:
+def format_commit_message(task: Task, include_emoji: bool = False, contributing_model: str = None) -> str:
     """
     Format a conventional commit message from a task.
     
     Args:
         task: The Task object
         include_emoji: Whether to include 🤖 emoji prefix
+        model_id: The contributing model that generated the code
         
     Returns:
         Formatted commit message following Conventional Commits spec
@@ -86,6 +87,10 @@ def format_commit_message(task: Task, include_emoji: bool = False) -> str:
     # Optional emoji prefix for compatibility
     if include_emoji:
         message = f"🤖 {message}"
+    
+    # Add model provenance if provided
+    if contributing_model:
+        message += f"\n\nModel-Provenance: {contributing_model}"
     
     return message
 

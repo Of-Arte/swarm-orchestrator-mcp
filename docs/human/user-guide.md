@@ -146,6 +146,24 @@ retrieve_context("authentication flow", top_k=10)
    class OAuthProvider:...
 ```
 
+### Context Isolation & Memory
+
+When working in complex sessions, use the Orienting Protocol to stay focused:
+
+```python
+orient_context(session_id="auth-refactor")
+# → 🧠 Swarm Orienting Protocol Results (Session: auth-refactor):
+#   📍 Roadmap Snapshot (docs/sessions/auth-refactor/PLAN.md):
+#   # Auth Refactor
+#   - [x] Initial research
+#   - [/] Implement async
+#   ...
+#
+#   🔥 Active Task Files (2 total):
+#     • task_123.md: Implement async support...
+#     • task_456.md: Update tests...
+```
+
 ### Escalation Pattern
 
 Start with search, escalate if needed:

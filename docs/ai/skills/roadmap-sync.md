@@ -25,7 +25,7 @@ If all sub-tasks for a phase are done, update the milestone marker:
 - Define the "High-Level Goal" for the next phase if it's missing.
 
 ### 3. Search Trigger Maintenance
-If the Phase name changed, update `docs/PLAN.md` to ensure the "Next Steps" section reflects the actual roadmap.
+If the Phase name changed, update `docs/ai/PLAN.md` to ensure the "Next Steps" section reflects the actual roadmap.
 
 ## Goal
 The `MASTER_PLAN.md` should always be the "Single Source of Truth" for the project's evolution, ensuring different agent sessions stay on the same vector.

@@ -21,7 +21,14 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install .[dev,treesitter]
         
-    - name: Run Polyglot Validation Gates
-      run: python validate_all.py
+    - name: Run Tests
+      run: pytest
+      
+    - name: Run Lint (Critical Errors Only)
+      run: flake8 mcp_core/ tests/ --select=E9,F63,F7,F82 --exclude=.venv
+      
+    - name: Run Mutation Tests (if configured)
+      run: mutmut run || echo "Mutation testing skipped or failed"
+      continue-on-error: true

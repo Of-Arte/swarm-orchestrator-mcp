@@ -8,24 +8,23 @@ Create a self-organizing, autonomous "Swarm" of AI agents capable of maintaining
 
 ## 🗺️ Roadmap & Status
 
-### Phase 1: Foundation (Completed)
-- [x] **Orchestrator V1**: Basic loop and dispatch.
-- [x] **MCP Server**: Exposed orchestrator via FastMCP (`server.py`).
-- [x] **Search Engine**: Hybrid semantic/keyword search (`search_engine.py`).
+### Phase 3: Visibility & Control (Completed)
+- [x] **Dashboard UI**: React + Vite + Glassmorphism design with real-time task board.
+- [x] **Knowledge Graph Visualization**: Force-directed graph for HippoRAG context.
+- [x] **Memory Inspector**: Provenance log and stack identity.
+- [x] **Demo Mode**: Fallback mock data and architecture diagrams.
+- [x] **Autonomous Git Engine**: Multi-role system (Scout, Auditor, Triage, Manager, Lifecycle) with orchestrator integration.
 
-### Phase 2: Context Awareness (Completed)
-- [x] **Context Bridge**:
-    - `PLAN.md` converted to Context Loader (RAM).
-    - `docs/ai/memory/active` established as high-fidelity LTM store.
-    - `docs/ai/memory/archive` established for rolling compression.
-- [x] **Markdown Indexing**: Enable `.md` and `.txt` indexing for documentation retrieval.
-- [x] **Transport Stability**: Migration to **Docker-based Stdio** for robust local development.
+### Phase 4: Dynamic Tooling & Debug (Completed)
+- [x] **Dynamic Tool Loader**: Load MCP tools at runtime.
+- [x] **Multiplexed Terminal**: Interactive terminal sessions.
+- [x] **Transport Debugger**: SSE/Stdio connectivity probes.
 
-### Phase 3: Autonomy & Integration (Current)
-- [x] **Rolling Memory System**: Tiered active/archive memory.
-- [x] **Structured Deliberation**: `deliberate()` tool for multi-step reasoning.
-- [ ] **Autonomous Git Team**: GitWorker for multi-file PRs.
-- [ ] **Context Injection**: Verify `retrieve_context` (HippoRAG) works on these new memory tiers.
+### Phase 5: Future Horizons (Backlog)
+- [ ] **Multi-Language Support**: Add Tree-sitter parsers for Rust, Go, and Java to HippoRAG.
+- [ ] **Advanced Verification**: Integrate `Z3` SMT solver for formal logic verification.
+- [ ] **Collaborative Swarm**: Enable Swarm-to-Swarm communication protocol.
+- [ ] **Neural Bug Detection**: ML model on provenance logs to predict failure points.
 
 ## 🧠 Memory Bank Index
 *Keywords to use with `search_codebase` to retrieve specific memory details.*

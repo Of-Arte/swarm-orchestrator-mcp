@@ -12,7 +12,7 @@ def _load_skill(filename: str) -> str:
     except Exception as e:
         return f"Error loading skill {filename}: {e}"
 
-def prompt_architect(task: Any, memory: Dict[str, Any]) -> str:
+def prompt_architect(task: Any, memory: Dict[str, Any], contributing_model: str = None) -> str:
     """Generates the prompt for the Architect worker using the planning skill."""
     skill_content = _load_skill("architect-planning.md")
     
@@ -23,10 +23,11 @@ def prompt_architect(task: Any, memory: Dict[str, Any]) -> str:
 Analyze the following Request and produce a formal Implementation Plan.
 TASK: {task.description}
 CONTEXT: {memory}
+MODEL_ID: {contributing_model or 'Unknown'}
 </mission>
 """
 
-def prompt_engineer(task: Any, memory: Dict[str, Any], context: Dict[str, Any]) -> str:
+def prompt_engineer(task: Any, memory: Dict[str, Any], context: Dict[str, Any], contributing_model: str = None) -> str:
     """Generates the prompt for the Engineer worker using the engineering skill."""
     skill_content = _load_skill("software-engineering.md")
     
@@ -46,10 +47,11 @@ def prompt_engineer(task: Any, memory: Dict[str, Any], context: Dict[str, Any]) 
 TASK: {task.description}
 CONTEXT: {context}
 MEMORY: {memory}
+MODEL_ID: {contributing_model or 'Unknown'}
 </mission>
 """
 
-def prompt_auditor(task: Any, context: Dict[str, Any]) -> str:
+def prompt_auditor(task: Any, context: Dict[str, Any], contributing_model: str = None) -> str:
     """Generates the prompt for the Auditor worker using the security audit skill."""
     skill_content = _load_skill("security-audit.md")
     
@@ -58,6 +60,42 @@ def prompt_auditor(task: Any, context: Dict[str, Any]) -> str:
 
 <mission>
 Review the artifacts produced in Task: {task.description}
+MODEL_ID: {contributing_model or 'Unknown'}
+</mission>
+"""
+
+def prompt_debugger(task: Any, memory: Dict[str, Any], context: Dict[str, Any], contributing_model: str = None) -> str:
+    """Generates the prompt for the Debugger worker using the debugging skill."""
+    skill_content = _load_skill("debugger.md")
+    
+    # Include test output if available
+    test_output = context.get("test_output", "No test output provided")
+    
+    return f"""
+{skill_content}
+
+<mission>
+Diagnose and fix failing test(s):
+TASK: {task.description}
+TEST OUTPUT: {test_output}
+CONTEXT: {context}
+MEMORY: {memory}
+MODEL_ID: {contributing_model or 'Unknown'}
+</mission>
+"""
+
+def prompt_researcher(task: Any, memory: Dict[str, Any], contributing_model: str = None) -> str:
+    """Generates the prompt for the Researcher worker using the research skill."""
+    skill_content = _load_skill("researcher.md")
+    
+    return f"""
+{skill_content}
+
+<mission>
+Research and document findings:
+QUESTION: {task.description}
+CONTEXT: {memory}
+MODEL_ID: {contributing_model or 'Unknown'}
 </mission>
 """
 
@@ -79,7 +117,7 @@ CONTEXT: {context}
 # Git Worker Prompts (v3.2)
 # ============================================================================
 
-def prompt_git_commit(task: Any, context: Dict[str, Any]) -> str:
+def prompt_git_commit(task: Any, context: Dict[str, Any], contributing_model: str = None) -> str:
     """Generates the prompt for the Commit Worker using the Conventional Commits skill."""
     from mcp_core.git_helpers import format_commit_message, format_commit_body
     
@@ -87,7 +125,7 @@ def prompt_git_commit(task: Any, context: Dict[str, Any]) -> str:
     files = context.get("output_files", [])
     
     # Generate conventional commit message
-    commit_msg = format_commit_message(task, include_emoji=True)
+    commit_msg = format_commit_message(task, include_emoji=True, contributing_model=contributing_model)
     body = format_commit_body(task.feedback_log)
     full_commit = f"{commit_msg}\n\n{body}" if body else commit_msg
     
@@ -107,7 +145,7 @@ Use this commit message if appropriate:
 </generated_template>
 """
 
-def prompt_git_pr(task: Any, context: Dict[str, Any]) -> str:
+def prompt_git_pr(task: Any, context: Dict[str, Any], contributing_model: str = None) -> str:
     """Generates the prompt for the PR Worker using the PR skill."""
     skill_content = _load_skill("git-pull-request.md")
     
@@ -124,7 +162,7 @@ def prompt_git_pr(task: Any, context: Dict[str, Any]) -> str:
 {', '.join(context.get('output_files', []))}
 
 ---
-*Automated PR from Swarm Orchestrator*'''
+*Automated PR from Swarm Orchestrator ({contributing_model or 'Unknown Model'})*'''
     
     return f"""
 {skill_content}
@@ -201,4 +239,28 @@ Synthesize these worker outputs into a single, coherent recommendation. Include:
 4. **Next Actions**: Concrete steps to implement this.
 
 Provide your synthesis in a clear, structured format.
+"""
+
+def prompt_git_worker(task: Any, context: Dict[str, Any], contributing_model: str = None) -> str:
+    """Generates the prompt for the Autonomous GitWorker Agent."""
+    skill_content = _load_skill("git-worker-agent.md")
+    
+    project_profile = context.get("project_profile", "{}")
+    repo_context = context.get("repo_context", "{}")
+    
+    return f"""
+{skill_content}
+
+<input_contract>
+Target Task:
+{task.json() if hasattr(task, 'json') else str(task)}
+
+Project Profile Snapshot:
+{project_profile}
+
+Repo Context:
+{repo_context}
+
+Model ID: {contributing_model or 'Unknown'}
+</input_contract>
 """

@@ -303,25 +303,5 @@ get_status()  # Check once
 
 ---
 
-## System Tools (Swarm v3.2+)
 
-### consult_reasoning_model
-Delegate complex reasoning tasks to the IDE's superior model via MCP Sampling.
-
-**Signature:**
-```python
-consult_reasoning_model(prompt: str, strategy: str = "balanced") -> str
-```
-
-**Strategies:**
-- `"thinking"`: Request high-intelligence/high-cost model (e.g., Claude 3.7 Sonnet). Use for planning, architecture, or when stuck.
-- `"balanced"`: Request general-purpose model (e.g., Gemini 1.5 Pro). Use for code generation or explanation.
-- `"fast"`: Request high-speed/low-cost model (e.g., Gemini 1.5 Flash). Use for summarization or quick checks.
-
-**Returns:**
-- The text response from the external model.
-- OR `❌ Error: Context unavailable` if the client does not support sampling.
-
-**Agent Behavior on Error:**
-If you receive the "Context unavailable" error, it means the user is not connected to a compatible IDE. **You must fall back to your own internal reasoning immediately.** Do not retry.
 

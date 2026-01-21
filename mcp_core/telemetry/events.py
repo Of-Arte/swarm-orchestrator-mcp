@@ -9,6 +9,7 @@ class EventType(str, Enum):
     TOOL_USE = "tool_use"
     TASK_ROUTING = "task_routing"
     ERROR = "error"
+    PROVENANCE = "provenance"
     SYS_STARTUP = "startup"
     GAP_DETECTED = "gap_detected" # For Toolsmith
 

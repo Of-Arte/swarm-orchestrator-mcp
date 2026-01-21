@@ -19,10 +19,15 @@ jobs:
       - name: Generate Release Notes
         id: release_notes
         run: |
-          # Extract notes for the current tag from CHANGELOG.md
-          # This is a basic version; more complex logic can be added later
-          echo "Release summary from CHANGELOG.md" > notes.txt
-          head -n 20 CHANGELOG.md >> notes.txt
+          TAG_NAME=${{ github.ref_name }}
+          VERSION=${TAG_NAME#v}
+          echo "## Release $VERSION" > notes.txt
+          echo "" >> notes.txt
+          # Pull the section from CHANGELOG.md for this version
+          sed -n "/## \[$VERSION\]/,/## /p" CHANGELOG.md | sed '$d' >> notes.txt
+          if [ ! -s notes.txt ]; then
+            echo "No entry found in CHANGELOG.md for $VERSION. Manual update recommended." >> notes.txt
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

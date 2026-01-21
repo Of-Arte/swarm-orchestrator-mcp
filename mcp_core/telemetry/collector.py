@@ -14,6 +14,7 @@ import hashlib
 
 from mcp_core.telemetry.events import TelemetryEvent, EventType
 from mcp_core.telemetry.buffer import LocalTelemetryBuffer
+from mcp_core.swarm_schemas import AuthorSignature
 
 
 logger = logging.getLogger(__name__)
@@ -89,6 +90,42 @@ class TelemetryCollector:
             
             return wrapper
         return decorator
+
+    def record_provenance(self, agent_id: str, role: str, action: str, contributing_model: str = None, artifact_ref: str = None) -> AuthorSignature:
+        """
+        Record a provenance event and return the signature for state containment.
+        """
+        # 1. Create Signature
+        signature = AuthorSignature(
+            agent_id=agent_id,
+            role=role,
+            contributing_model=contributing_model,
+            action=action,
+            artifact_ref=artifact_ref,
+            signature=self.install_id  # using install_id as a proxy for now
+        )
+
+        # 2. Log to Telemetry DB
+        # We store the full signature in 'properties'
+        props = signature.model_dump(mode='json')
+        if artifact_ref:
+            props["artifact_ref"] = artifact_ref
+
+        event = TelemetryEvent(
+            session_id=self.session_id,
+            install_id=self.install_id,
+            type=EventType.PROVENANCE,
+            tool_name="provenance_log",
+            success=True,
+            properties=props
+        )
+
+        try:
+            self.buffer.add_event(event)
+        except Exception as e:
+            logger.warning(f"Failed to record provenance: {e}")
+
+        return signature
 
 
 # Global collector instance

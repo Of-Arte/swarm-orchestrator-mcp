@@ -13,9 +13,18 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            github.rest.pulls.requestReviewers({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              reviewers: ['your-algorithmic-lead'] # Placeholder, update as needed
-            });
+            try {
+              const reviewers = []; // Add reviewers here as needed
+              if (reviewers.length > 0) {
+                await github.rest.pulls.requestReviewers({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.payload.pull_request.number,
+                  reviewers: reviewers
+                });
+              } else {
+                console.log("No algorithmic reviewers specified, skipping automatic request.");
+              }
+            } catch (error) {
+              console.warn("Failed to request reviewers:", error.message);
+            }

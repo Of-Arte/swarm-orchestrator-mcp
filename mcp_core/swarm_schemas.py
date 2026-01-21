@@ -74,9 +74,11 @@ class AuthorSignature(BaseModel):
     """Cryptographic provenance for an artifact change."""
     agent_id: str
     role: Literal["architect", "engineer", "auditor", "system"]
+    contributing_model: Optional[str] = None # The actual model used (e.g. gpt-4, llama-3.2-3b)
     timestamp: datetime = Field(default_factory=datetime.now)
     action: str  # e.g., "created", "modified", "approved"
-    signature: Optional[str] = None  # Git provides attribution for IDE usage
+    artifact_ref: Optional[str] = None # The file or task ID being signed
+    signature: Optional[str] = None  # Git provides attribution for Ide usage
 
 
 class Task(BaseModel):
@@ -92,7 +94,7 @@ class Task(BaseModel):
     output_files: List[str] = Field(default_factory=list, description="Files expected to change")
 
     # [v3.0: Algorithm Dispatch Flags]
-    conflicts_detected: bool = Field(default=False, description="Trigger OCC validator")
+    conflicts_detected: bool = Field(default=False, description="Trigger external conflict resolution")
     concurrent_edits: bool = Field(default=False, description="Trigger CRDT merger")
     context_needed: bool = Field(default=False, description="Trigger HippoRAG retrieval")
     requires_consensus: bool = Field(default=False, description="Trigger weighted voting")
@@ -110,6 +112,12 @@ class Task(BaseModel):
     git_base_branch: str = Field(default="main", description="Base branch for PR")
     git_pr_title: Optional[str] = Field(default=None, description="PR title")
     git_pr_body: Optional[str] = Field(default=None, description="PR description")
+
+    # [v3.3: GitWorker Role Flags]
+    feature_discovery: bool = Field(default=False, description="Trigger FeatureScoutRole")
+    code_audit: bool = Field(default=False, description="Trigger CodeAuditorRole")
+    issue_triage_needed: bool = Field(default=False, description="Trigger IssueTriageRole")
+    project_bootstrap: bool = Field(default=False, description="Trigger ProjectLifecycleRole (start)")
 
     feedback_log: List[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.now)

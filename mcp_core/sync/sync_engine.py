@@ -12,7 +12,7 @@ class SyncEngine:
     Synchronizes the 'Human Tier' (Markdown Artifacts) with the 'Machine Tier' (Blackboard).
     """
     
-    def __init__(self, root_path: str = ".", plan_file: str = "docs/PLAN.md"):
+    def __init__(self, root_path: str = ".", plan_file: str = "docs/ai/PLAN.md"):
         self.root_path = root_path
         self.plan_path = os.path.join(root_path, plan_file)
         self.bridge = MarkdownBridge()

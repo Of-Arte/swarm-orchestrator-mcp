@@ -1,16 +1,15 @@
-# Area Labels
-area:algorithms:
-  - mcp_core/algorithms/**/*
-area:tools:
-  - mcp_core/tools/**/*
-  - mcp_core/tools/dynamic/**/*
-area:documentation:
-  - docs/**/*
-  - README.md
-  - ARCHITECTURE.md
-area:ci-cd:
-  - .github/workflows/**/*
-area:core:
-  - mcp_core/*.py
-  - orchestrator.py
-  - server.py
+# Area Labels (v5 Schema)
+"area:algorithms":
+  - any: ["mcp_core/algorithms/**/*", "tests/algorithms/**/*"]
+
+"area:tools":
+  - any: ["mcp_core/tools/**/*", "mcp_core/tools/dynamic/**/*"]
+
+"area:documentation":
+  - any: ["docs/**/*", "README.md", "ARCHITECTURE.md"]
+
+"area:ci-cd":
+  - any: [".github/workflows/**/*", ".github/labeler.yml"]
+
+"area:core":
+  - any: ["mcp_core/*.py", "orchestrator.py", "server.py"]

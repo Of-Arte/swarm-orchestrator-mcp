@@ -54,16 +54,27 @@ deliberate(
 
 ## Output Formats
 
-### JSON (Default)
+### Concise Markdown (Default)
 ```python
-result = deliberate(problem="...", return_json=True)
-# Returns structured JSON with steps, workers, confidence
+result = deliberate(problem="...")
+# Returns concise summary (~200 chars):
+# ✅ **Deliberation Complete** (Confidence: 0.95)
+# 
+# **Result**: The answer is 42
+# 
+# *(3 steps executed using HippoRAG, Analysis. Full trace in server logs.)*
 ```
 
-### Markdown
+**Benefits**:
+- ~10x less verbose than JSON
+- Agent-friendly, minimal context pollution
+- Full audit trail preserved in server logs
+
+### Verbose JSON
 ```python
-result = deliberate(problem="...", return_json=False)
-# Returns formatted Markdown summary
+result = deliberate(problem="...", return_json=True)
+# Returns full structured JSON with steps, workers, confidence
+# Use for debugging or when you need programmatic access to step details
 ```
 
 ## Deliberation Steps
