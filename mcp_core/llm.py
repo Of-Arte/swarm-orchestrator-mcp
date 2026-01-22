@@ -11,6 +11,9 @@ from templates.agent_response_schema import AgentResponse
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Dev build: Enable prompt tracing
+TRACE_PROMPTS = os.getenv("SWARM_TRACE_PROMPTS", "false").lower() == "true"
+
 
 def generate_response(prompt: str, model_alias: str = "gemini-3-flash-preview") -> AgentResponse:
     """
@@ -18,6 +21,11 @@ def generate_response(prompt: str, model_alias: str = "gemini-3-flash-preview") 
     Supports: "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", etc.
     """
     logger.info(f"🧠 Routing to Model: {model_alias}")
+    
+    # Dev build: Trace prompts
+    if TRACE_PROMPTS:
+        truncated = prompt[:500] if len(prompt) > 500 else prompt
+        logger.debug(f"📝 Prompt Trace ({model_alias}):\n{truncated}...")
 
     # [v3.5] Google Gemini-First Architecture with Cascading Fallback
     

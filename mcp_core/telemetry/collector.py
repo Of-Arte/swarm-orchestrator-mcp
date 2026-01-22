@@ -6,6 +6,7 @@ Provides decorators and utilities for tracking tool usage.
 
 import logging
 import functools
+import os
 from pathlib import Path
 from typing import Callable, Any
 from datetime import datetime, timezone
@@ -18,6 +19,9 @@ from mcp_core.swarm_schemas import AuthorSignature
 
 
 logger = logging.getLogger(__name__)
+
+# Dev build: Enable verbose telemetry
+VERBOSE_TELEMETRY = os.getenv("SWARM_VERBOSE_TELEMETRY", "false").lower() == "true"
 
 
 class TelemetryCollector:
@@ -61,6 +65,10 @@ class TelemetryCollector:
                 success = True
                 error = None
                 
+                # Verbose telemetry: Log tool invocation
+                if VERBOSE_TELEMETRY:
+                    logger.debug(f"🔧 Tool {tool_name} invoked with args={args[:2] if args else []}, kwargs={list(kwargs.keys())}")
+                
                 try:
                     result = func(*args, **kwargs)
                     return result
@@ -72,6 +80,10 @@ class TelemetryCollector:
                     # Record event
                     end_time = datetime.now(timezone.utc)
                     duration_ms = (end_time - start_time).total_seconds() * 1000
+                    
+                    # Verbose telemetry: Log timing
+                    if VERBOSE_TELEMETRY:
+                        logger.debug(f"🕒 Tool {tool_name} completed in {duration_ms:.2f}ms (success={success})")
                     
                     event = TelemetryEvent(
                         session_id=self.session_id,

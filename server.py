@@ -17,10 +17,14 @@ from mcp_core.search_engine import CodebaseIndexer, HybridSearch, IndexConfig, g
 from mcp_core.telemetry.collector import collector
 
 from pathlib import Path
+import os
+
+# Dev build: Check for debug mode
+DEBUG_MODE = os.getenv("SWARM_DEBUG", "false").lower() == "true"
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.FileHandler("server.log"),
@@ -28,6 +32,12 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("SwarmServer")
+
+if DEBUG_MODE:
+    logger.info("🐛 DEV MODE: Debug features enabled (SWARM_DEBUG=true)")
+    logger.info("   - Verbose telemetry: ON")
+    logger.info("   - SBFL auto-analysis: ON")
+    logger.info("   - Prompt tracing: ON")
 
 # Initialize FastMCP server
 mcp = FastMCP("Swarm Orchestrator v3.0")

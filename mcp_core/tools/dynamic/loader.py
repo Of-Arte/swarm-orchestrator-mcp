@@ -6,10 +6,14 @@ Automatically loads and registers tools from the dynamic/ directory.
 
 import logging
 import importlib.util
+import os
 from pathlib import Path
 from fastmcp import FastMCP
 
 logger = logging.getLogger(__name__)
+
+# Dev build: List of tools that should only load in debug mode
+DEBUG_ONLY_TOOLS = ["mcp_transport_debug.py"]
 
 
 def load_dynamic_tools(mcp: FastMCP) -> int:
@@ -27,9 +31,17 @@ def load_dynamic_tools(mcp: FastMCP) -> int:
     tools_dir = Path(__file__).parent
     loaded = 0
     
+    # Dev build: Check if debug mode is enabled
+    debug_mode = os.getenv("SWARM_DEBUG", "false").lower() == "true"
+    
     for tool_file in tools_dir.glob("*.py"):
         # Skip loader and test files
         if tool_file.name in ("loader.py", "__init__.py"):
+            continue
+        
+        # Dev build: Skip debug-only tools in production mode
+        if tool_file.name in DEBUG_ONLY_TOOLS and not debug_mode:
+            logger.debug(f"⏭️ Skipping debug-only tool: {tool_file.name} (SWARM_DEBUG=false)")
             continue
             
         try:

@@ -1,8 +1,27 @@
 services:
+  swarm:
+    build: .
+    container_name: swarm-mcp-server
+    ports:
+      - "8000:8000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=postgresql://swarm:swarm-secret@db:5432/swarm_memory
+    depends_on:
+      - db
+
   db:
     image: ankane/pgvector:latest
     ports:
       - "5433:5432"
+    security_opt:
+      - no-new-privileges:true
     environment:
       POSTGRES_USER: swarm
       POSTGRES_PASSWORD: swarm-secret

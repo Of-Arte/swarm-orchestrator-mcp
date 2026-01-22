@@ -16,6 +16,8 @@
 [![GHCR](https://img.shields.io/badge/GHCR-Pull-blue?style=for-the-badge&logo=github&logoColor=white)](https://github.com/orgs/${{ github.repository_owner }}/packages)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-00ADD8?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMiA3TDEyIDEyTDIyIDdMMTIgMloiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0yIDEyTDEyIDE3TDIyIDEyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz4KPC9zdmc+)](https://modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+[![Trivy](https://img.shields.io/badge/Trivy-Scanned-00C853?style=for-the-badge&logo=aqua&logoColor=white)](https://trivy.dev)
+[![Cosign](https://img.shields.io/badge/Cosign-Signed-6A1B9A?style=for-the-badge&logo=sigstore&logoColor=white)](https://sigstore.dev)
 
 [![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-00ADD8?style=flat-square)](https://modelcontextprotocol.io)
 [![HippoRAG Paper](https://img.shields.io/badge/HippoRAG-Research-9b59b6?style=flat-square)](https://arxiv.org/)

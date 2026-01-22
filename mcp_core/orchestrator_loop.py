@@ -3,6 +3,8 @@ import json
 import logging
 import time
 import shutil
+import uuid
+import asyncio
 
 from filelock import FileLock
 from datetime import datetime
@@ -29,21 +31,30 @@ from mcp_core.github_mcp_client import GitHubMCPClient
 from mcp_core.sync.sync_engine import SyncEngine
 from mcp_core.telemetry.collector import collector
 
+# V3.7: SQL Session Persistence
+from mcp_core.postgres_client import PostgreSQLMCPClient
+
 STATE_FILE = "project_profile.json"
 LEGACY_STATE_FILE = "blackboard_state.json"
 LOCK_FILE = "project_profile.json.lock"
 
 
 class Orchestrator:
-    def __init__(self, root_path: str = ".", state_file: str = STATE_FILE):
+    def __init__(self, root_path: str = ".", state_file: str = STATE_FILE, session_id: str = None):
         self.root_path = root_path
         self.state_file = state_file
         self.lock_file = f"{state_file}.lock"
+        
+        # [V3.7: SQL Session State]
+        self.session_id = session_id or os.getenv("SWARM_SESSION_ID") or str(uuid.uuid4())
+        self.agent_id = os.getenv("SWARM_AGENT_ID") or f"agent_{uuid.uuid4().hex[:8]}"
+        self._postgres = None
+        self._sql_enabled = bool(os.getenv("POSTGRES_URL"))
 
         # [Fix: Race/Migration]
         self._ensure_migration()
 
-        # Load State
+        # Load State (tries SQL first if enabled)
         self.state = ProjectProfile()
         self.load_state()
 
@@ -52,12 +63,10 @@ class Orchestrator:
         self._toolchain = None
 
         # [V3.0: Algorithm Components] - Lazy init
-
         self._rag = None
         self._consensus = None
         self._debate = None
         self._verifier = None
-        self._sbfl = None
         self._sbfl = None
         self._git = None
         self._git_dispatcher = None
@@ -65,7 +74,7 @@ class Orchestrator:
         self._sync = None
         self._pruner = None
         
-        logging.info("✅ Orchestrator initialized (lazy mode)")
+        logging.info(f"✅ Orchestrator initialized (session: {self.session_id[:8]}, SQL: {self._sql_enabled})")
 
     def _ensure_migration(self):
         """Auto-Archive Legacy State Logic."""
@@ -191,8 +200,39 @@ class Orchestrator:
                 logging.warning(f"ContextPruner unavailable: {e}")
         return self._pruner
 
+    @property
+    def postgres(self):
+        """Lazy init PostgreSQL client"""
+        if self._postgres is None and self._sql_enabled:
+            self._postgres = PostgreSQLMCPClient()
+        return self._postgres
+
     def load_state(self) -> None:
-        """Load orchestrator state from disk with error handling"""
+        """Load orchestrator state from SQL (preferred) or disk."""
+        # Try SQL first if enabled
+        if self._sql_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Already in async context
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        profile_data = pool.submit(
+                            lambda: asyncio.run(self.postgres.load_session_state(self.session_id, self.agent_id))
+                        ).result(timeout=10)
+                else:
+                    profile_data = loop.run_until_complete(
+                        self.postgres.load_session_state(self.session_id, self.agent_id)
+                    )
+                
+                if profile_data:
+                    self.state = ProjectProfile(**profile_data)
+                    logging.info(f"✅ Loaded state from SQL (session: {self.session_id[:8]})")
+                    return
+            except Exception as e:
+                logging.warning(f"SQL load failed, falling back to file: {e}")
+        
+        # Fallback to file
         if not os.path.exists(self.state_file):
             logging.info("No existing state file, using fresh state")
             return
@@ -208,14 +248,58 @@ class Orchestrator:
             logging.info("Using fresh state instead")
 
     def save_state(self) -> None:
-        """Save orchestrator state to disk with error handling"""
+        """Save orchestrator state to SQL (preferred) and disk."""
+        profile_data = json.loads(self.state.model_dump_json())
+        
+        # Save to SQL if enabled
+        if self._sql_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        pool.submit(
+                            lambda: asyncio.run(self.postgres.save_session_state(
+                                self.session_id, profile_data, self.agent_id
+                            ))
+                        ).result(timeout=10)
+                else:
+                    loop.run_until_complete(
+                        self.postgres.save_session_state(self.session_id, profile_data, self.agent_id)
+                    )
+                logging.debug(f"State saved to SQL (session: {self.session_id[:8]})")
+            except Exception as e:
+                logging.warning(f"SQL save failed: {e}")
+        
+        # Always save to file as backup
         try:
             with FileLock(self.lock_file, timeout=5):
                 with open(self.state_file, "w", encoding="utf-8") as f:
                     f.write(self.state.model_dump_json(indent=2))
                 logging.debug(f"State saved to {self.state_file}")
         except Exception as e:
-            logging.error(f"Failed to save state: {e}")
+            logging.error(f"Failed to save state to file: {e}")
+    
+    def release_lock(self) -> None:
+        """Release SQL session lock on shutdown."""
+        if self._sql_enabled and self._postgres:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        pool.submit(
+                            lambda: asyncio.run(self.postgres.release_session_lock(
+                                self.session_id, self.agent_id
+                            ))
+                        ).result(timeout=5)
+                else:
+                    loop.run_until_complete(
+                        self.postgres.release_session_lock(self.session_id, self.agent_id)
+                    )
+                logging.info(f"🔓 Released session lock for {self.session_id[:8]}")
+            except Exception as e:
+                logging.warning(f"Failed to release lock: {e}")
 
     def process_task(self, task_id: str) -> None:
         self.load_state()
@@ -287,16 +371,6 @@ class Orchestrator:
         worker_prompt = ""
         worker_model = self.state.worker_models.get("default", "gemini-pro")
 
-<<<<<<< HEAD
-        if "plan" in task.description.lower():
-            worker_model = self.state.worker_models.get("architect", worker_model)
-            worker_prompt = prompt_architect(task, context_slice, contributing_model=worker_model)
-        elif "audit" in task.description.lower():
-            worker_model = self.state.worker_models.get("auditor", worker_model)
-            worker_prompt = prompt_auditor(task, git_context, contributing_model=worker_model)
-        else:
-            worker_model = self.state.worker_models.get("engineer", worker_model)
-=======
         # [Phase 2] Respect assigned_worker from Task schema first
         role = None
         if task.assigned_worker:
@@ -325,7 +399,6 @@ class Orchestrator:
         elif role == "researcher":
             worker_prompt = prompt_researcher(task, context_slice, contributing_model=worker_model)
         else:  # engineer (default)
->>>>>>> origin/dev
             worker_prompt = prompt_engineer(task, context_slice, git_context, contributing_model=worker_model)
 
         logging.info(f"Dispatching task {task_id[:8]}...")
@@ -498,6 +571,13 @@ class Orchestrator:
     
     def _handle_fault_localization(self, task: Task) -> bool:
         """Use Ochiai SBFL for automated bug location"""
+        # Dev build: Check if SBFL is enabled
+        sbfl_enabled = os.getenv("SWARM_SBFL_ENABLED", "false").lower() == "true"
+        
+        if not sbfl_enabled:
+            logging.debug("SBFL disabled (SWARM_SBFL_ENABLED=false)")
+            return False
+        
         if self.sbfl is None:
             task.feedback_log.append("Ochiai SBFL not available (dependency missing)")
             return False
