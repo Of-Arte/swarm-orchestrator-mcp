@@ -13,9 +13,9 @@ Syncing short-term task progress with long-term memory (The Master Plan).
 ## Alignment Protocol
 
 ### 1. Verify Milestone Completion
-Read the `docs/ai/memory/active/00_MASTER_PLAN.md` and identify the current active Phase.
+Read the `docs/ai/ROADMAP.md` and identify the current active Phase.
 ```powershell
-view_file("v:\Projects\Servers\swarm\docs\ai\memory\active\00_MASTER_PLAN.md")
+view_file("docs/ai/ROADMAP.md")
 ```
 
 ### 2. Checkmate Update
@@ -28,4 +28,4 @@ If all sub-tasks for a phase are done, update the milestone marker:
 If the Phase name changed, update `docs/ai/PLAN.md` to ensure the "Next Steps" section reflects the actual roadmap.
 
 ## Goal
-The `MASTER_PLAN.md` should always be the "Single Source of Truth" for the project's evolution, ensuring different agent sessions stay on the same vector.
+The `ROADMAP.md` should always be the "Single Source of Truth" for the project's evolution, ensuring different agent sessions stay on the same vector.

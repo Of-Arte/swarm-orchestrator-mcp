@@ -2,6 +2,46 @@
 
 All notable changes to Project Swarm will be documented in this file.
 
+## [3.4.0] - 2026-01-21
+
+### 🛠️ Dev Build & Debug Features
+- **Global Debug Mode**: Introduced `SWARM_DEBUG` env var to toggle debug capabilities.
+  - Activates `DEBUG` level logging.
+  - Loads debug-only tools (e.g., `mcp_transport_debug.py`).
+  - Displays "🐛 DEV MODE" banner on server startup.
+- **Verbose Telemetry**: `SWARM_VERBOSE_TELEMETRY` now logs full tool arguments and execution timing in `collector.py`.
+- **SBFL Toggle**: `SWARM_SBFL_ENABLED` allows disabling expensive Ochiai fault localization in production.
+- **Prompt Tracing**: `SWARM_TRACE_PROMPTS` logs truncated inputs to LLMs for prompt engineering.
+- **Dev-First Workflow**: Updated contribution guidelines to use `dev` branch as the default integration point.
+
+### 🧹 Version Synchronization
+- **VersionManager**: Added `sync_versions()` to align `server.py`, `orchestrator.py`, and `swarm_schemas.py` with `pyproject.toml`.
+
+---
+
+## [3.3.0] - 2026-01-21
+
+### 🤖 Autonomous Git Engine
+- **Multi-Role Agent System**: Rebuilt the Git system from a single worker into five specialized autonomous roles (Feature Scout, Code Auditor, Issue Triage, Branch Manager, and Project Lifecycle).
+- **Prompt Engineering**: Introduced `git-worker-agent.md` skill with formal handoff protocols and exit reports.
+- **Reliability**: Implemented comprehensive unit test suite in `tests/algorithms/test_git_worker.py`.
+
+### 🧬 Strategic State Management
+- **Roadmap Automation**: Integrated `docs/PLAN.md` with the orchestrator loop for bi-directional status synchronization.
+- **Pydantic Migration**: Standardized `project_profile.json` structure using strictly-typed models.
+- **Concurrency**: Replaced legacy mechanisms with cross-platform `filelock` for process-safe blackboard operations.
+
+### 🎯 Output Verbosity Optimization
+- **Deliberate Tool**: Changed default output from verbose JSON (~2000 chars) to concise Markdown summaries (~200 chars)
+  - Agents now see: `✅ Deliberation Complete (Confidence: 0.95) | Result: [answer] | (3 steps executed)`
+  - Full audit trails preserved in server logs via `logger.info()` and `logger.debug()`
+  - Backward compatible: `return_json=True` still available for verbose output
+  - **Impact**: ~10x reduction in agent context pollution while maintaining operator visibility
+- **Index Persistence**: Verified `CodebaseIndexer.load_cache()` ensures index survives server restarts
+- **Test Coverage**: Added `tests/test_deliberate_verbosity.py` to verify concise output defaults
+
+---
+
 ## [3.1.0] - 2026-01-19
 
 ### Enhanced
@@ -112,6 +152,15 @@ All notable changes to Project Swarm will be documented in this file.
 - Added `mcp_core/tools/dynamic` for runtime tool loading.
 - Added `mcp_core/telemetry` for event buffering.
 - Updated `worker_prompts.py` with Toolsmith persona and strict governance rules.
+  
+### Removed
+- **Legacy Algorithms**: Removed **OCR Validator** and **CRDT Merger** (superseded by Autonomous Git Worker Team).
+
+### Infrastructure
+- **Lifecycle Manager**: Added `VersionManager` and `release` CLI command for automated versioning and changelog management.
+- **Git Worker**: Updated prompts to enforce Conventional Commits (type/scope/desc) and helpful context (Why/What).
+- **GitHub**: Verified Issue Templates and Actions workflows.
+
 
 ---
 

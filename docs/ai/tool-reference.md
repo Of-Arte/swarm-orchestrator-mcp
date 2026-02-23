@@ -2,7 +2,7 @@
 
 Detailed specifications for AI agents using Swarm MCP tools.
 
-## search_codebase
+## search_codebase `[Scope: General]`
 
 ### Input Validation
 
@@ -53,7 +53,7 @@ Symbol patterns (regex):
 
 ---
 
-## index_codebase
+## index_codebase `[Scope: General]`
 
 ### Input Validation
 
@@ -81,7 +81,7 @@ Symbol patterns (regex):
 
 ---
 
-## retrieve_context
+## retrieve_context `[Scope: General]`
 
 ### Input Validation
 
@@ -113,7 +113,7 @@ Symbol patterns (regex):
 
 ---
 
-## process_task
+## process_task `[Scope: General]`
 
 ### Input Validation
 
@@ -132,10 +132,10 @@ Automatic routing based on instruction keywords:
 
 | Keyword | Algorithm | Trigger Pattern |
 |---------|-----------|-----------------|
-| refactor | OCC Validator | `"refactor" in instruction.lower()` |
+
 | debug | Ochiai SBFL | `"debug" in instruction.lower()` |
 | verify, prove | Z3 Verifier | `"verify" or "prove" in instruction.lower()` |
-| merge, combine | CRDT Merger | `"merge" or "combine" in instruction.lower()` |
+
 | analyze, understand | HippoRAG | `"analyze" or "understand" in instruction.lower()` |
 
 ### Output Format
@@ -153,7 +153,7 @@ Feedback: {feedback}
 
 ---
 
-## get_status
+## get_status `[Scope: General]`
 
 ### Input Validation
 
@@ -180,6 +180,56 @@ None (no parameters)
 - `IN_PROGRESS` - Currently processing
 - `COMPLETED` - Finished successfully
 - `FAILED` - Error occurred
+
+---
+
+## check_health `[Scope: Internal]`
+
+**Requires**: `SWARM_INTERNAL_TOOLS=true`
+
+### Input Validation
+None (no parameters)
+
+### Output Format
+```
+🏥 Swarm System Health Check
+
+✅ Telemetry DB: 0.11 MB
+✅ All tools performing well (>70% success)
+✅ PostgreSQL: Connected
+
+📊 Environment:
+   Container: No
+   Debug Mode: Off
+```
+
+### Usage Heuristics
+- Use when debugging system stability.
+- Use if tools return "Connection Refused" or unexpected errors.
+
+---
+
+## debug_mcp_transport `[Scope: Internal]`
+
+**Requires**: `SWARM_INTERNAL_TOOLS=true`
+
+### Input Validation
+- `target_url`: Optional string (for SSE)
+- `container_name`: Optional string (for Docker stdio)
+
+### Output Format
+```
+🔍 MCP Transport Debugger
+------------------------
+Target: http://localhost:8000/sse
+
+✅ Connection Successful (200 OK)
+⏱️ Latency: 15ms
+```
+
+### Usage Heuristics
+- Use when agents report "MCP Connection Error".
+- Use to verify Docker container reachability.
 
 ---
 

@@ -25,7 +25,7 @@ class IntentConfig(BaseModel):
 
 class ToolchainConfig(BaseModel):
     """The capabilities map for the project."""
-    version: str = "2.0"
+    version: str = "3.4.0"
     stack_id: StackType
     actions: Dict[IntentType, IntentConfig] = Field(default_factory=dict)
     environment: Dict[str, str] = Field(default_factory=dict)
@@ -95,7 +95,6 @@ class Task(BaseModel):
 
     # [v3.0: Algorithm Dispatch Flags]
     conflicts_detected: bool = Field(default=False, description="Trigger external conflict resolution")
-    concurrent_edits: bool = Field(default=False, description="Trigger CRDT merger")
     context_needed: bool = Field(default=False, description="Trigger HippoRAG retrieval")
     requires_consensus: bool = Field(default=False, description="Trigger weighted voting")
     requires_debate: bool = Field(default=False, description="Trigger debate engine")
@@ -109,9 +108,15 @@ class Task(BaseModel):
     
     # [v3.2: Branch & PR Management]
     git_branch_name: Optional[str] = Field(default=None, description="Feature branch name")
-    git_base_branch: str = Field(default="main", description="Base branch for PR")
+    git_base_branch: str = Field(default="dev", description="Base branch for PR")
     git_pr_title: Optional[str] = Field(default=None, description="PR title")
     git_pr_body: Optional[str] = Field(default=None, description="PR description")
+
+    # [v3.3: GitWorker Role Flags]
+    feature_discovery: bool = Field(default=False, description="Trigger FeatureScoutRole")
+    code_audit: bool = Field(default=False, description="Trigger CodeAuditorRole")
+    issue_triage_needed: bool = Field(default=False, description="Trigger IssueTriageRole")
+    project_bootstrap: bool = Field(default=False, description="Trigger ProjectLifecycleRole (start)")
 
     feedback_log: List[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.now)
@@ -122,7 +127,7 @@ class ProjectProfile(BaseModel):
     """
     The Single Source of Truth for Project Swarm v3.0.
     """
-    schema_version: str = "2.0.0"
+    schema_version: str = "3.4.0"
     metadata: Dict[str, Any] = Field(default_factory=dict)
     
     # [New: Provenance]

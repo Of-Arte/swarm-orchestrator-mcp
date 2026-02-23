@@ -58,6 +58,24 @@ If you want to run completely offline (e.g. for privacy or zero cost):
 2. Update config or env var `LOCAL_LLM_URL`.
 3. Set `"git-writer": "ollama/llama3"` in `mcp_config.json`.
 
+## 🔒 Internal Systems & Maintenance
+
+Swarm v3.4 introduces **Tool Scoping** to separate general project tools from internal system maintenance.
+
+### 1. Tool Scopes
+- **General Scope** (Default): Standard tools for coding, searching, and git (`search_codebase`, `deliberate`, `git_worker`).
+- **Internal Scope**: System-level tools for Swarm's own health (`check_health`, `mcp_transport_debug`).
+
+### 2. Accessing Internal Tools
+To access internal tools (e.g., for self-debugging), the environment must be configured:
+- **Flag**: `SWARM_INTERNAL_TOOLS=true`
+- **Effect**: Unlocks `check_health()` and transport debuggers.
+
+### 3. Debugging Playbook
+If you are tasked with debugging Swarm itself (not the user's project), refer to the [Debugging Playbook](debugging-playbook.md).
+
+---
+
 ## 📝 Conventional Commits Format
 
 All commits follow [Conventional Commits](https://conventionalcommits.org) specification:

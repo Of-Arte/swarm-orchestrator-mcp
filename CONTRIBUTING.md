@@ -21,8 +21,14 @@ pip install -r requirements.txt
 
 ### 1. Create a Branch
 
+We use a **Dev-First Workflow**. All feature branches should generally target `dev`, not `main`.
+
 ```bash
-git checkout -b feature/your-feature-name
+# Fetch latest dev
+git fetch origin dev
+
+# Create feature branch from dev
+git checkout -b feature/your-feature-name origin/dev
 ```
 
 ### 2. Make Changes

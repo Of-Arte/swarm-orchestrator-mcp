@@ -34,5 +34,5 @@ Delete the raw `task_*.md` files once captured in the archive summary.
 ## Safety Guard
 NEVER delete:
 - `00_MASTER_PLAN.md`
-- `00_ERROR_LOG.md`
+- PostgreSQL Error Knowledge (Managed by DB)
 - Any file with an `[ACTIVE]` tag.

@@ -64,6 +64,41 @@ MODEL_ID: {contributing_model or 'Unknown'}
 </mission>
 """
 
+def prompt_debugger(task: Any, memory: Dict[str, Any], context: Dict[str, Any], contributing_model: str = None) -> str:
+    """Generates the prompt for the Debugger worker using the debugging skill."""
+    skill_content = _load_skill("debugger.md")
+    
+    # Include test output if available
+    test_output = context.get("test_output", "No test output provided")
+    
+    return f"""
+{skill_content}
+
+<mission>
+Diagnose and fix failing test(s):
+TASK: {task.description}
+TEST OUTPUT: {test_output}
+CONTEXT: {context}
+MEMORY: {memory}
+MODEL_ID: {contributing_model or 'Unknown'}
+</mission>
+"""
+
+def prompt_researcher(task: Any, memory: Dict[str, Any], contributing_model: str = None) -> str:
+    """Generates the prompt for the Researcher worker using the research skill."""
+    skill_content = _load_skill("researcher.md")
+    
+    return f"""
+{skill_content}
+
+<mission>
+Research and document findings:
+QUESTION: {task.description}
+CONTEXT: {memory}
+MODEL_ID: {contributing_model or 'Unknown'}
+</mission>
+"""
+
 def prompt_toolsmith(task: Any, context: Dict[str, Any]) -> str:
     """Generates the prompt for the Toolsmith worker using the tool creation skill."""
     skill_content = _load_skill("tool-creation.md")
@@ -228,4 +263,45 @@ Repo Context:
 
 Model ID: {contributing_model or 'Unknown'}
 </input_contract>
+"""
+
+def prompt_tool_planner(goal: str, tools: list, context: dict = None) -> str:
+    """Generates the prompt for the Tool Planner (Meta-Orchestrator)."""
+    import json
+    tools_json = json.dumps(tools, indent=2)
+    context_text = json.dumps(context, indent=2) if context else "None"
+    
+    return f"""
+You are the Swarm Meta-Orchestrator. Your mission is to plan the execution of a complex task using ONLY the tools provided by the client (IDE).
+
+### Available Tools (from Client):
+{tools_json}
+
+### Operational Context:
+{context_text}
+
+### User Goal:
+{goal}
+
+### Instructions:
+1. Analyze the User Goal and break it down into logical steps.
+2. For each step, select the most appropriate tool from the "Available Tools" list.
+3. Provide a sequence of tool calls that will achieve the goal.
+4. Each entry in the sequence MUST include:
+   - `tool_name`: Exact name from the provided list.
+   - `arguments`: Dictionary of arguments for the tool.
+   - `reasoning`: Why this tool is chosen for this step.
+
+### Response Format:
+Respond ONLY with a JSON object containing a `plan` key, which is a list of tool call objects.
+Example:
+{{
+  "plan": [
+    {{
+      "tool_name": "list_dir",
+      "arguments": {{ "path": "." }},
+      "reasoning": "Identify project structure"
+    }}
+  ]
+}}
 """

@@ -21,7 +21,7 @@ Skill for performing automated "pre-flight" technical impact analysis on new iss
 - **Goal**: Identify the "Blast Radius" – which files see this change.
 
 ### 3. Generate Technical Impact Plan
-- Create an `implementation_plan.md` in `docs/ai/memory/active/`.
+- Create an `implementation_plan.md` in `docs/ai/active/`.
 - **Must Include**:
     - **Root Cause Analysis**: Why is this happening?
     - **Affected Components**: List of files.

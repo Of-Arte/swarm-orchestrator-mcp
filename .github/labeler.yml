@@ -1,16 +1,34 @@
-# Area Labels
+# Area Labels (actions/labeler@v5 Schema)
+# Docs: https://github.com/actions/labeler
+
 "area:algorithms":
-  - "mcp_core/algorithms/**/*"
+  - changed-files:
+    - any-glob-to-any-file: 
+      - "mcp_core/algorithms/**/*"
+      - "tests/algorithms/**/*"
+
 "area:tools":
-  - "mcp_core/tools/**/*"
-  - "mcp_core/tools/dynamic/**/*"
+  - changed-files:
+    - any-glob-to-any-file:
+      - "mcp_core/tools/**/*"
+      - "mcp_core/tools/dynamic/**/*"
+
 "area:documentation":
-  - "docs/**/*"
-  - "README.md"
-  - "ARCHITECTURE.md"
+  - changed-files:
+    - any-glob-to-any-file:
+      - "docs/**/*"
+      - "README.md"
+      - "ARCHITECTURE.md"
+
 "area:ci-cd":
-  - ".github/workflows/**/*"
+  - changed-files:
+    - any-glob-to-any-file:
+      - ".github/workflows/**/*"
+      - ".github/labeler.yml"
+
 "area:core":
-  - "mcp_core/*.py"
-  - "orchestrator.py"
-  - "server.py"
+  - changed-files:
+    - any-glob-to-any-file:
+      - "mcp_core/*.py"
+      - "orchestrator.py"
+      - "server.py"

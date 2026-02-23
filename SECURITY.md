@@ -20,7 +20,7 @@ Swarm v3.0 includes capabilities that execute code or commands:
 
 ### File System Access
 
-- **OCC Validator**: Performs atomic writes to files.
+
 - **HippoRAG**: Reads and parses all `.py` files in the directory.
 - **Swarm Cache**: Data is stored in `.swarm-cache/`.
 
@@ -36,3 +36,64 @@ Swarm v3.0 includes capabilities that execute code or commands:
 2. **Review before running**: Be aware of what `debug` and `run` commands will execute.
 3. **Use file permissions**: Restrict access to `.swarm-cache/`
 4. **Audit API usage**: Monitor embedding/LLM API calls for unexpected activity
+
+## Secrets Management
+
+### Environment Variables (Development)
+
+```bash
+# .env file (add to .gitignore)
+GITHUB_TOKEN=ghp_xxxx
+GEMINI_API_KEY=AIzaSy...
+OPENAI_API_KEY=sk-...
+```
+
+### Docker Secrets (Production)
+
+```bash
+# Create secrets
+echo "your-api-key" | docker secret create gemini_api_key -
+
+# Use in docker-compose.yml
+services:
+  swarm:
+    secrets:
+      - gemini_api_key
+    environment:
+      - GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key
+```
+
+### External Secret Managers
+
+For production deployments, use:
+- **HashiCorp Vault**: `vault kv get secret/swarm/api-keys`
+- **AWS Secrets Manager**: Integrated via IAM roles
+- **Azure Key Vault**: Use managed identity
+
+### Never Do This
+
+- ❌ Commit secrets to git
+- ❌ Pass secrets as command arguments
+- ❌ Log environment variables
+- ❌ Embed secrets in Docker images
+
+## Container Security
+
+### Image Verification
+
+Published images are signed with Cosign:
+
+```bash
+cosign verify ghcr.io/AGENTagony/swarm:latest
+```
+
+### Security Scanning
+
+- **Trivy**: Runs on every push to `main`
+- **SBOM**: Generated for each image build
+- **Dependabot**: Monitors for vulnerable dependencies
+
+### Runtime Hardening
+
+See [Runtime Monitoring Guide](docs/security/runtime-monitoring.md) for Falco setup.
+

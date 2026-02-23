@@ -38,11 +38,11 @@ process_task("Debug why semantic search with Gemini embeddings occasionally time
 
 ---
 
-## Task 3: Refactor Dual-Mode Transport Logic (OCC Validator)
+## Task 3: Refactor Dual-Mode Transport Logic (General Worker)
 
 **Objective**: Safely refactor server.py to extract transport logic into separate modules.
 
-**Algorithmic Worker**: OCC Validator (Optimistic Concurrency Control)
+**Algorithmic Worker**: General Worker
 
 **Task Description**:
 ```
@@ -72,22 +72,7 @@ process_task("Analyze the memory system architecture and generate a dependency g
 
 ---
 
-## Task 5: Merge Concurrent MCP Config Updates (CRDT Merger)
 
-**Objective**: Handle concurrent edits to mcp_config.json from multiple agents safely.
-
-**Algorithmic Worker**: CRDT Merger (Conflict-Free Replicated Data Types)
-
-**Task Description**:
-```
-process_task("Merge concurrent updates to mcp_config.json where Agent A adds a 'github' server and Agent B adds a 'firebase' server at the same time. Use CRDT semantics to ensure both servers are preserved without conflicts.")
-```
-
-**Expected Output**: Merged JSON with both servers present, demonstrating commutative and associative merge operations.
-
-**Trigger Keywords**: "merge", "combine", "concurrent edits", "conflict resolution"
-
----
 
 ## How to Execute
 

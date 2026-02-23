@@ -45,7 +45,9 @@
     "results": {}
   },
   "active_context": {},
-  "memory_bank": {},
+  "memory_bank": {
+    "test_key": "test_value_from_orchestrator"
+  },
   "worker_models": {
     "default": "gemini-3-flash-preview",
     "git-writer": "gemini-3-flash-preview"

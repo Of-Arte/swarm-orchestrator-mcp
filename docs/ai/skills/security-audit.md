@@ -10,6 +10,25 @@ Instructions for performing security audits on code changes.
 - When `audit` keyword appears in task description
 - Before merging sensitive code (auth, payments, data handling)
 
+## Reasoning Protocol
+
+Before auditing, use `<thinking>` tags to:
+1. Identify the attack surface of changes
+2. List applicable OWASP categories
+3. Plan verification approach
+
+## Tool Selection
+
+- **Pattern Search**: Use `grep_search` for known vulnerability patterns
+- **Context**: Use `view_code_item` to examine specific functions
+- **Dependencies**: Check for known CVEs in requirements/package files
+
+## Guardrails
+
+- Do NOT approve code with unresolved security findings
+- Do NOT skip OWASP checklist items
+- Do NOT assume security controls exist—verify them
+
 ## OWASP Top 10 Checklist
 
 ### A01: Broken Access Control

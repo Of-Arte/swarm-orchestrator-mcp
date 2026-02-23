@@ -54,16 +54,27 @@ deliberate(
 
 ## Output Formats
 
-### JSON (Default)
+### Concise Markdown (Default)
 ```python
-result = deliberate(problem="...", return_json=True)
-# Returns structured JSON with steps, workers, confidence
+result = deliberate(problem="...")
+# Returns concise summary (~200 chars):
+# ✅ **Deliberation Complete** (Confidence: 0.95)
+# 
+# **Result**: The answer is 42
+# 
+# *(3 steps executed using HippoRAG, Analysis. Full trace in server logs.)*
 ```
 
-### Markdown
+**Benefits**:
+- ~10x less verbose than JSON
+- Agent-friendly, minimal context pollution
+- Full audit trail preserved in server logs
+
+### Verbose JSON
 ```python
-result = deliberate(problem="...", return_json=False)
-# Returns formatted Markdown summary
+result = deliberate(problem="...", return_json=True)
+# Returns full structured JSON with steps, workers, confidence
+# Use for debugging or when you need programmatic access to step details
 ```
 
 ## Deliberation Steps
@@ -71,7 +82,7 @@ result = deliberate(problem="...", return_json=False)
 | Step | Name | Worker | Purpose |
 |------|------|--------|---------|
 | 1 | Decompose | HippoRAG | Break problem into sub-problems |
-| 2 | Analyze | Auto-routed | Route to OCC/SBFL/Z3 based on keywords |
+| 2 | Analyze | Auto-routed | Route to SBFL/Z3 based on keywords |
 | 3 | Synthesize | LLM | Combine worker outputs |
 | 4+ | Optional | Custom | Extended analysis |
 

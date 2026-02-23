@@ -3,6 +3,8 @@ import json
 import logging
 import time
 import shutil
+import uuid
+import asyncio
 
 from filelock import FileLock
 from datetime import datetime
@@ -11,18 +13,30 @@ from datetime import datetime
 from mcp_core.swarm_schemas import ProjectProfile, Task, DeliberationResult, DeliberationStep
 from mcp_core.stack_detector import StackDetector
 from mcp_core.toolchain_manager import ToolchainManager
-from mcp_core.worker_prompts import prompt_architect, prompt_engineer, prompt_auditor
+from mcp_core.worker_prompts import (
+    prompt_architect, prompt_engineer, prompt_auditor,
+    prompt_debugger, prompt_researcher,
+    prompt_git_commit, prompt_git_pr
+)
 from mcp_core.llm import generate_response
 
 # V3.0 Algorithms
 from mcp_core.algorithms import (
-    CRDTMerger, HippoRAGRetriever,
+    HippoRAGRetriever,
     WeightedVotingConsensus, DebateEngine,
     Z3Verifier, OchiaiLocalizer, GitWorker,
     ContextPruner
 )
+from mcp_core.github_mcp_client import GitHubMCPClient
 from mcp_core.sync.sync_engine import SyncEngine
 from mcp_core.telemetry.collector import collector
+from mcp_core.telemetry.telemetry_analytics import TelemetryAnalyticsService
+
+# V3.7: SQL Session Persistence
+from mcp_core.postgres_client import PostgreSQLMCPClient
+
+# V3.7: SQL Session Persistence
+from mcp_core.postgres_client import PostgreSQLMCPClient
 
 STATE_FILE = "project_profile.json"
 LEGACY_STATE_FILE = "blackboard_state.json"
@@ -30,15 +44,21 @@ LOCK_FILE = "project_profile.json.lock"
 
 
 class Orchestrator:
-    def __init__(self, root_path: str = ".", state_file: str = STATE_FILE):
+    def __init__(self, root_path: str = ".", state_file: str = STATE_FILE, session_id: str = None):
         self.root_path = root_path
         self.state_file = state_file
         self.lock_file = f"{state_file}.lock"
+        
+        # [V3.7: SQL Session State]
+        self.session_id = session_id or os.getenv("SWARM_SESSION_ID") or str(uuid.uuid4())
+        self.agent_id = os.getenv("SWARM_AGENT_ID") or f"agent_{uuid.uuid4().hex[:8]}"
+        self._postgres = None
+        self._sql_enabled = bool(os.getenv("POSTGRES_URL"))
 
         # [Fix: Race/Migration]
         self._ensure_migration()
 
-        # Load State
+        # Load State (tries SQL first if enabled)
         self.state = ProjectProfile()
         self.load_state()
 
@@ -47,18 +67,31 @@ class Orchestrator:
         self._toolchain = None
 
         # [V3.0: Algorithm Components] - Lazy init
-        self._crdt = None
         self._rag = None
         self._consensus = None
         self._debate = None
         self._verifier = None
         self._sbfl = None
-        self._sbfl = None
         self._git = None
+        self._git_dispatcher = None
+        self._github_client = None
         self._sync = None
         self._pruner = None
         
-        logging.info("✅ Orchestrator initialized (lazy mode)")
+        # [V3.8: Telemetry Analytics]
+        self.analytics = TelemetryAnalyticsService()
+        
+        # [V3.8: DB Maintenance] Optimize telemetry DB on startup
+        try:
+            self.analytics.optimize_database()
+            # Prune old events (>30 days) to prevent DB bloat
+            pruned = self.analytics.prune_old_events(retention_days=30)
+            if pruned > 0:
+                logging.info(f"🗑️ Pruned {pruned} old telemetry events")
+        except Exception as e:
+            logging.warning(f"Telemetry maintenance warning: {e}")
+        
+        logging.info(f"✅ Orchestrator initialized (session: {self.session_id[:8]}, SQL: {self._sql_enabled})")
 
     def _ensure_migration(self):
         """Auto-Archive Legacy State Logic."""
@@ -83,6 +116,32 @@ class Orchestrator:
         return self._git
 
     @property
+    def git_dispatcher(self):
+        """Lazy init GitRoleDispatcher"""
+        if self._git_dispatcher is None:
+            from mcp_core.algorithms.git_role_dispatcher import GitRoleDispatcher
+            self._git_dispatcher = GitRoleDispatcher(self)
+            logging.info("✅ GitRoleDispatcher initialized")
+        return self._git_dispatcher
+
+    @property
+    def github_client(self):
+        """Lazy init GitHub MCP client"""
+        if self._github_client is None:
+            if not os.getenv("GITHUB_TOKEN"):
+                logging.warning("GITHUB_TOKEN not set - GitHub operations limited")
+                return None
+            
+            try:
+                # Initialize our wrapper client
+                self._github_client = GitHubMCPClient()
+                logging.info("✅ GitHubMCPClient initialized")
+            except Exception as e:
+                logging.error(f"Failed to init GitHub client: {e}")
+                self._github_client = None
+        return self._github_client
+
+    @property
     def rag(self):
         """Lazy init HippoRAGRetriever"""
         if self._rag is None:
@@ -96,15 +155,7 @@ class Orchestrator:
                 self._rag = None
         return self._rag
 
-    @property
-    def crdt(self):
-        """Lazy init CRDTMerger"""
-        if self._crdt is None:
-            try:
-                self._crdt = CRDTMerger()
-            except Exception as e:
-                logging.warning(f"CRDT unavailable: {e}")
-        return self._crdt
+
 
     @property
     def consensus(self):
@@ -166,8 +217,39 @@ class Orchestrator:
                 logging.warning(f"ContextPruner unavailable: {e}")
         return self._pruner
 
+    @property
+    def postgres(self):
+        """Lazy init PostgreSQL client"""
+        if self._postgres is None and self._sql_enabled:
+            self._postgres = PostgreSQLMCPClient()
+        return self._postgres
+
     def load_state(self) -> None:
-        """Load orchestrator state from disk with error handling"""
+        """Load orchestrator state from SQL (preferred) or disk."""
+        # Try SQL first if enabled
+        if self._sql_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Already in async context
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        profile_data = pool.submit(
+                            lambda: asyncio.run(self.postgres.load_session_state(self.session_id, self.agent_id))
+                        ).result(timeout=10)
+                else:
+                    profile_data = loop.run_until_complete(
+                        self.postgres.load_session_state(self.session_id, self.agent_id)
+                    )
+                
+                if profile_data:
+                    self.state = ProjectProfile(**profile_data)
+                    logging.info(f"✅ Loaded state from SQL (session: {self.session_id[:8]})")
+                    return
+            except Exception as e:
+                logging.warning(f"SQL load failed, falling back to file: {e}")
+        
+        # Fallback to file
         if not os.path.exists(self.state_file):
             logging.info("No existing state file, using fresh state")
             return
@@ -183,19 +265,70 @@ class Orchestrator:
             logging.info("Using fresh state instead")
 
     def save_state(self) -> None:
-        """Save orchestrator state to disk with error handling"""
+        """Save orchestrator state to SQL (preferred) and disk."""
+        profile_data = json.loads(self.state.model_dump_json())
+        
+        # Save to SQL if enabled
+        if self._sql_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        pool.submit(
+                            lambda: asyncio.run(self.postgres.save_session_state(
+                                self.session_id, profile_data, self.agent_id
+                            ))
+                        ).result(timeout=10)
+                else:
+                    loop.run_until_complete(
+                        self.postgres.save_session_state(self.session_id, profile_data, self.agent_id)
+                    )
+                logging.debug(f"State saved to SQL (session: {self.session_id[:8]})")
+            except Exception as e:
+                logging.warning(f"SQL save failed: {e}")
+        
+        # Always save to file as backup
         try:
             with FileLock(self.lock_file, timeout=5):
                 with open(self.state_file, "w", encoding="utf-8") as f:
                     f.write(self.state.model_dump_json(indent=2))
                 logging.debug(f"State saved to {self.state_file}")
         except Exception as e:
-            logging.error(f"Failed to save state: {e}")
+            logging.error(f"Failed to save state to file: {e}")
+    
+    def release_lock(self) -> None:
+        """Release SQL session lock on shutdown."""
+        if self._sql_enabled and self._postgres:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        pool.submit(
+                            lambda: asyncio.run(self.postgres.release_session_lock(
+                                self.session_id, self.agent_id
+                            ))
+                        ).result(timeout=5)
+                else:
+                    loop.run_until_complete(
+                        self.postgres.release_session_lock(self.session_id, self.agent_id)
+                    )
+                logging.info(f"🔓 Released session lock for {self.session_id[:8]}")
+            except Exception as e:
+                logging.warning(f"Failed to release lock: {e}")
 
     def process_task(self, task_id: str) -> None:
         self.load_state()
         task = self.state.get_task(task_id)
         if not task or task.status == "COMPLETED":
+            return
+
+        # [v3.4] Deterministic Loop Detection
+        if self.check_loop_state(task):
+            task.status = "FAILED"
+            task.feedback_log.append("🛑 Task aborted due to infinite loop detection")
+            self.save_state()
             return
 
         # [V3.5: Smart-Power] Prune Provenance Context
@@ -216,9 +349,7 @@ class Orchestrator:
         if task.context_needed and self._handle_context_retrieval(task):
             algorithm_handled = True
 
-        # 3. Concurrent Edits (CRDT)
-        if task.concurrent_edits and self._handle_crdt_merge(task):
-            algorithm_handled = True
+
 
         # 4. Consensus Required (Weighted Voting)
         if task.requires_consensus and self._handle_consensus(task):
@@ -245,11 +376,42 @@ class Orchestrator:
             self.save_state()
             return
 
-        # [Fix: Context] Pruning logic
-        # Instead of self.state.memory_bank (which could be huge), we just pass key items
-        # For now, we still pass it, but this is where the RollingWindow would go.
-        context_slice = self.state.memory_bank
+        # [Phase 3] Sliding window for context optimization
+        # Only pass last N relevant entries to reduce token usage
+        MAX_MEMORY_ITEMS = 10
+        if len(self.state.memory_bank) > MAX_MEMORY_ITEMS:
+            context_slice = dict(list(self.state.memory_bank.items())[-MAX_MEMORY_ITEMS:])
+        else:
+            context_slice = self.state.memory_bank
         
+        # [V3.8: Adaptive Context] Inject Tool Insights & Circuit Breaker
+        try:
+            problems = self.analytics.get_problematic_tools(threshold=0.7)
+            if problems:
+                warnings = []
+                critical_tools = []  # Tools with TRIPPED circuit breaker
+                
+                for p in problems:
+                    tool_status = self.analytics.get_tool_status(p['tool'])
+                    status_icon = "🔴" if tool_status == "TRIPPED" else "⚠️"
+                    warnings.append(f"{status_icon} {p['tool']}: {int(p['success_rate']*100)}% success ({p['total_uses']} uses)")
+                    
+                    if tool_status == "TRIPPED":
+                        critical_tools.append(p['tool'])
+                
+                alert_text = "⚠️ TELEMETRY WARNING ⚠️\n" if not critical_tools else "🔴 CIRCUIT BREAKER TRIPPED 🔴\n"
+                context_slice["SYSTEM_ALERTS"] = (
+                    alert_text +
+                    "The following tools have been unstable recently. Use alternatives if possible:\n" +
+                    "\n".join(warnings)
+                )
+                
+                if critical_tools:
+                    context_slice["BLOCKED_TOOLS"] = critical_tools
+                    logging.warning(f"🔴 Circuit breaker tripped for tools: {critical_tools}")
+        except Exception as e:
+            logging.warning(f"Failed to inject telemetry context: {e}")
+
         # [v3.1: Git Context Injection]
         git_context = {}
         if self.git.is_available():
@@ -261,14 +423,34 @@ class Orchestrator:
         worker_prompt = ""
         worker_model = self.state.worker_models.get("default", "gemini-pro")
 
-        if "plan" in task.description.lower():
-            worker_model = self.state.worker_models.get("architect", worker_model)
-            worker_prompt = prompt_architect(task, context_slice, contributing_model=worker_model)
+        # [Phase 2] Respect assigned_worker from Task schema first
+        role = None
+        if task.assigned_worker:
+            role = task.assigned_worker.lower()
+        elif task.tests_failing:
+            role = "debugger"
+        elif "research" in task.description.lower() or "investigate" in task.description.lower():
+            role = "researcher"
+        elif "plan" in task.description.lower():
+            role = "architect"
         elif "audit" in task.description.lower():
-            worker_model = self.state.worker_models.get("auditor", worker_model)
-            worker_prompt = prompt_auditor(task, git_context, contributing_model=worker_model)
+            role = "auditor"
         else:
-            worker_model = self.state.worker_models.get("engineer", worker_model)
+            role = "engineer"
+        
+        # Get role-specific model if configured
+        worker_model = self.state.worker_models.get(role, worker_model)
+        
+        # Generate role-specific prompt
+        if role == "architect":
+            worker_prompt = prompt_architect(task, context_slice, contributing_model=worker_model)
+        elif role == "auditor":
+            worker_prompt = prompt_auditor(task, git_context, contributing_model=worker_model)
+        elif role == "debugger":
+            worker_prompt = prompt_debugger(task, context_slice, git_context, contributing_model=worker_model)
+        elif role == "researcher":
+            worker_prompt = prompt_researcher(task, context_slice, contributing_model=worker_model)
+        else:  # engineer (default)
             worker_prompt = prompt_engineer(task, context_slice, git_context, contributing_model=worker_model)
 
         logging.info(f"Dispatching task {task_id[:8]}...")
@@ -285,6 +467,23 @@ class Orchestrator:
         response = generate_response(worker_prompt, model_alias=worker_model)
 
         task.feedback_log.append(f"Worker execution: {response.status}")
+
+        # [Phase 2] Check for role handoff request
+        if response.reasoning_trace and "<handoff_to" in response.reasoning_trace:
+            handoff_role, handoff_reason = self._parse_handoff(response.reasoning_trace)
+            if handoff_role:
+                logging.info(f"🔄 Role handoff detected: {role} → {handoff_role}")
+                # Create new task for handoff
+                handoff_task = Task(
+                    description=f"[Handoff from {role}] {handoff_reason or task.description}",
+                    assigned_worker=handoff_role,
+                    input_files=task.input_files,
+                    output_files=task.output_files
+                )
+                self.state.add_task(handoff_task)
+                task.feedback_log.append(f"🔄 Handed off to {handoff_role}: {handoff_task.task_id[:8]}")
+                logging.info(f"Created handoff task: {handoff_task.task_id[:8]}")
+
         if response.status == "SUCCESS":
             task.status = "COMPLETED"
 
@@ -297,9 +496,24 @@ class Orchestrator:
             )
             self.state.provenance_log.append(sig)
             
-            # [v3.4] Git Interaction Nudge (Human-in-the-Loop)
+            # [v3.4] Strict Git Completion (Deterministic)
             if self.git.is_available() and self.git.has_changes():
-                 task.feedback_log.append("📝 Tip: You have uncommitted changes. To save, ask: 'Run git worker'")
+                # Check for "Strict Mode" env var
+                if os.getenv("SWARM_STRICT_GIT", "true").lower() == "true":
+                    # Reject completion
+                    task.status = "PENDING" # Revert status
+                    task.feedback_log.append("❌ Strict Mode: Cannot complete task with uncommitted changes.")
+                    task.feedback_log.append("💡 Action: Committing changes automatically...")
+                    
+                    # Auto-Fix: Trigger Git Commit
+                    # In next loop, this flag will trigger _handle_git_workflow
+                    task.git_commit_ready = True
+                    task.git_branch_name = task.git_branch_name or "auto/cleanup"
+                    
+                    logging.info("🛑 Strict Git: Reverted completion and triggered auto-commit")
+                else:
+                    # Legacy Nudge
+                    task.feedback_log.append("📝 Tip: You have uncommitted changes. To save, ask: 'Run git worker'")
         else:
             # [V3.5] Log Task Failure
             sig = collector.record_provenance(
@@ -356,14 +570,17 @@ class Orchestrator:
             chunks = self.rag.retrieve_context(task.description, top_k=5)
             
             # Add context to task feedback
-            context_summary = "\n".join([
-                f"- {c.node_name} ({c.file_path}:{c.start_line})"
-                for c in chunks
-            ])
-            task.feedback_log.append(f"HippoRAG Context:\n{context_summary}")
-            
-            logging.info(f"✅ Retrieved {len(chunks)} context chunks")
-            return True
+            if chunks:
+                context_summary = "\n".join([f"  • {c.file_path}:{c.start_line}" for c in chunks[:3]])
+                if len(chunks) > 3:
+                    context_summary += f"\n  ...and {len(chunks)-3} more chunks."
+                task.feedback_log.append(f"HippoRAG Context (Summary):\n{context_summary}")
+                
+                logging.info(f"✅ Retrieved {len(chunks)} context chunks")
+                return True
+            else:
+                task.feedback_log.append("HippoRAG: No relevant context found.")
+                return True
             
         except Exception as e:
             logging.error(f"HippoRAG failed: {e}")
@@ -371,22 +588,7 @@ class Orchestrator:
             return False
     
     
-    def _handle_crdt_merge(self, task: Task) -> bool:
-        """Use CRDT Merger for concurrent edits"""
-        try:
-            # Create or get CRDT document for collaborative editing
-            doc_id = f"task_{task.task_id}"
-            
-            if doc_id not in self.crdt.documents:
-                self.crdt.create_document(doc_id, "")
-            
-            task.feedback_log.append(f"CRDT: Document {doc_id} ready for merging")
-            logging.info("✅ CRDT merge initialized")
-            return True
-            
-        except Exception as e:
-            logging.error(f"CRDT failed: {e}")
-            return False
+
     
     def _handle_consensus(self, task: Task) -> bool:
         """Use Weighted Voting for multi-agent consensus"""
@@ -436,6 +638,13 @@ class Orchestrator:
     
     def _handle_fault_localization(self, task: Task) -> bool:
         """Use Ochiai SBFL for automated bug location"""
+        # Dev build: Check if SBFL is enabled
+        sbfl_enabled = os.getenv("SWARM_SBFL_ENABLED", "false").lower() == "true"
+        
+        if not sbfl_enabled:
+            logging.debug("SBFL disabled (SWARM_SBFL_ENABLED=false)")
+            return False
+        
         if self.sbfl is None:
             task.feedback_log.append("Ochiai SBFL not available (dependency missing)")
             return False
@@ -463,15 +672,32 @@ class Orchestrator:
         """
         Orchestrate Git worker team for autonomous repository maintenance.
         
-        Workflow:
-        1. Branch (if git_branch_name specified)
-        2. Commit (if git_commit_ready)
-        3. Push (if git_auto_push)
         4. PR (if git_create_pr OR auto-PR for completed feature tasks)
         """
         if not self.git.is_available():
             task.feedback_log.append("Git: Not available")
             return False
+            
+        # [v3.3: Role-based Dispatch]
+        role_triggered = any([
+            task.feature_discovery,
+            task.code_audit,
+            task.issue_triage_needed,
+            task.project_bootstrap
+        ])
+        
+        if role_triggered:
+            try:
+                reports = self.git_dispatcher.dispatch(task)
+                for report in reports:
+                    task.feedback_log.append(f"🤖 GitRole({task.task_id[:4]}): {report.status}")
+                    if report.remaining_work:
+                        task.feedback_log.append(f"   ↳ {report.remaining_work}")
+                return True
+            except Exception as e:
+                logging.error(f"GitRole dispatch failed: {e}")
+                task.feedback_log.append(f"⚠️ GitRole Error: {e}")
+                return False
         
         try:
             from mcp_core.worker_prompts import prompt_git_branch, prompt_git_commit, prompt_git_pr
@@ -550,7 +776,10 @@ class Orchestrator:
                                    )
                                    self.state.provenance_log.append(sig)
                            
-                           task.feedback_log.append(f"💾 Commit Worker Log:\n" + "\n".join(execution_log))
+                           exec_summary = "\n".join(execution_log)
+                           if len(exec_summary) > 300:
+                               exec_summary = exec_summary[:300] + "..."
+                           task.feedback_log.append(f"💾 Commit Worker Log:\n{exec_summary}")
                            
                            # Add push confirmation prompt
                            # task.feedback_log.append(
@@ -651,11 +880,16 @@ class Orchestrator:
                     logging.info(f"🔀 Generating PR with {git_model}...")
                     response = generate_response(pr_prompt, model_alias=git_model)
                     
+                    # [v3.5] Trim reasoning trace for feedback log
+                    trace = response.reasoning_trace
+                    if len(trace) > 200:
+                        trace = trace[:200] + "..."
+                    
                     if response.tool_calls:
                        calls_str = "\n".join([f"{t.function}({t.arguments})" for t in response.tool_calls])
                        task.feedback_log.append(f"🔀 PR Worker ({git_model}):\n{calls_str}")
                     else:
-                       task.feedback_log.append(f"🔀 PR Worker ({git_model}):\n{response.reasoning_trace}")
+                       task.feedback_log.append(f"🔀 PR Worker ({git_model}):\n{trace}")
                        
                 except Exception as e:
                     logging.error(f"PR Generation Failed: {e}")
@@ -739,7 +973,22 @@ class Orchestrator:
             subprocess.run(["git", "push", remote, branch], cwd=repo_path, check=True)
             return f"✅ Pushed to {remote}/{branch}"
 
-        return f"⚠️ Unknown tool: {tool_name}"
+        return f"❌ Unknown git tool: {tool_name}"
+    
+    def _parse_handoff(self, reasoning_trace: str) -> tuple[str, str]:
+        """Parse <handoff_to role="X">reason</handoff_to> from reasoning trace."""
+        import re
+        
+        # Match: <handoff_to role="auditor">reason text</handoff_to>
+        pattern = r'<handoff_to\s+role="(\w+)"[^>]*>([^<]*)</handoff_to>'
+        match = re.search(pattern, reasoning_trace)
+        
+        if match:
+            role = match.group(1)
+            reason = match.group(2).strip()
+            return (role, reason)
+        
+        return (None, None)
 
     # ========================================================================
     # V3.3: Structured Deliberation

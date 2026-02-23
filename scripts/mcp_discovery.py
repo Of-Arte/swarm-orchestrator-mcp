@@ -29,7 +29,7 @@ def get_docker_mcp_servers():
             # Matches 0.0.0.0:8000->8000/tcp or 8000/tcp
             mcp_match = re.search(r'(?:0\.0\.0\.0:|\[::\]:)?(\d+)->\d+/tcp', ports)
             
-            if mcp_match:
+            if mcp_match and "mcp" in name.lower():
                 port = mcp_match.group(1)
                 servers.append({
                     "id": container_id,

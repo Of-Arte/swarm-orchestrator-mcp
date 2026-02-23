@@ -2,6 +2,7 @@ import shutil
 from pathlib import Path
 from fastmcp import FastMCP
 import sys
+import pytest
 
 # Add swarm root to path so we can import the worker
 SWARM_ROOT = Path("v:/Projects/Servers/swarm")
@@ -12,17 +13,18 @@ from mcp_core.tools.dynamic import memory_worker
 # Setup Test Environment
 TEST_SESSION_ID = "test_verification_session"
 SESSION_ROOT = SWARM_ROOT / "docs" / "sessions" / TEST_SESSION_ID
-GLOBAL_PLAN = SWARM_ROOT / "docs" / "ai" / "PLAN.md"
+GLOBAL_PLAN = SWARM_ROOT / "docs" / "ai" / "memory" / "active" / "ROADMAP.md"
 
-def setup():
+@pytest.fixture(autouse=True)
+def manage_test_env():
+    """Setup and teardown the test session environment."""
+    if SESSION_ROOT.exists():
+        shutil.rmtree(SESSION_ROOT)
+    yield
     if SESSION_ROOT.exists():
         shutil.rmtree(SESSION_ROOT)
 
-def teardown():
-    if SESSION_ROOT.exists():
-        shutil.rmtree(SESSION_ROOT)
-    pass # Keep artifacts for inspection if needed, or uncomment above to clean
-
+@pytest.mark.anyio
 def test_isolation():
     print("🔍 Testing Memory Isolation...")
     
@@ -41,7 +43,7 @@ def test_isolation():
     # 2. Test Global Behavior
     print("\n--- Testing Global Context ---")
     global_res = orient()
-    assert "Current Roadmap" in global_res
+    assert "Roadmap Snapshot" in global_res
     print("✅ Global context reads correct PLAN.md")
     
     # 3. Test Session Initialization
@@ -56,23 +58,25 @@ def test_isolation():
     
     # 4. Test Locking (Claim Task)
     print("\n--- Testing Claim Task ---")
+    import time
+    unique_task = f"New Test Task {int(time.time())}"
     # Add a dummy task to global plan first
     original_plan = GLOBAL_PLAN.read_text(encoding="utf-8")
-    GLOBAL_PLAN.write_text(original_plan + "\n- [ ] New Test Task", encoding="utf-8")
+    GLOBAL_PLAN.write_text(original_plan + f"\n- [ ] {unique_task}", encoding="utf-8")
     
     # Claim it
-    claim_res = claim(session_id=TEST_SESSION_ID, task_description="New Test Task")
+    claim_res = claim(session_id=TEST_SESSION_ID, task_description=unique_task)
     print(f"Claim Result: {claim_res}")
     assert "✅ Task claimed" in claim_res
     
     # Verify Global Plan updated
     updated_plan = GLOBAL_PLAN.read_text(encoding="utf-8")
-    assert f"[/] New Test Task (claimed by {TEST_SESSION_ID})" in updated_plan
+    assert f"[/] {unique_task} (claimed by {TEST_SESSION_ID})" in updated_plan
     print("✅ Global plan updated with claim")
     
     # Verify Session Plan updated (sync)
     sess_plan = (SESSION_ROOT / "PLAN.md").read_text(encoding="utf-8")
-    assert f"[/] New Test Task (claimed by {TEST_SESSION_ID})" in sess_plan
+    assert f"[/] {unique_task} (claimed by {TEST_SESSION_ID})" in sess_plan
     print("✅ Session plan synced after claim")
     
     # 5. Test Drift Detection
@@ -93,22 +97,13 @@ def test_isolation():
     # Verify Global Plan marked completed
     final_plan = GLOBAL_PLAN.read_text(encoding="utf-8")
     # Should find [x] New Test Task (without claim tag)
-    assert "[x] New Test Task" in final_plan
+    assert f"[x] {unique_task}" in final_plan
     assert "(claimed by" not in final_plan
     print("✅ Global plan updated with completion")
     
     # Cleanup Global Plan (restore)
     GLOBAL_PLAN.write_text(original_plan, encoding="utf-8")
 
-    # Teardown
-    teardown()
     print("\n🏆 Verification Successful: Overlap Management Works!")
 
-if __name__ == "__main__":
-    setup()
-    try:
-        test_isolation()
-    except Exception as e:
-        print(f"\n❌ Test Failed: {e}")
-        teardown()
-        exit(1)
+

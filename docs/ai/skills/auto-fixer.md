@@ -20,7 +20,7 @@ Skill for autonomous resolution of low-to-medium complexity issues.
 - **Backtrack**: If a change causes a regression, use `git restore` and update the `task.md` with the new findings.
 
 ### 3. Generate Walkthrough
-- Create `docs/ai/memory/active/walkthrough.md`.
+- Create `docs/ai/walkthrough.md` (or update existing).
 - List exactly what was fixed and what tests pass.
 - Link to the `implementation_plan.md`.
 
