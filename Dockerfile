@@ -1,5 +1,5 @@
 # Build stage
-FROM python:3.11-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ COPY pyproject.toml README.md ./
 RUN pip install --no-cache-dir --target=/app/pkgs .
 
 # Runtime stage
-FROM python:3.11-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 WORKDIR /app
 
