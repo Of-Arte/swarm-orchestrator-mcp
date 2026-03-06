@@ -1,10 +1,10 @@
 # Quick Start
 
-Get productive with Vexorbis Swarm in 5 minutes.
+Get productive with Swarm Orchestrator in 5 minutes.
 
 ## Step 1: Configure MCP Settings
 
-Before using Vexorbis Swarm, ensure it's added to your IDE's MCP config (e.g., `mcp_config.json` for Antigravity):
+Before using Swarm Orchestrator, ensure it's added to your IDE's MCP config (e.g., `mcp_config.json` for Antigravity):
 
 ```json
 {
