@@ -28,15 +28,14 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js and npm for GitHub MCP Server
-RUN apt-get update && apt-get install -y \
-    curl \
-    nodejs \
-    npm \
+# Install Node.js 22 LTS via NodeSource (Debian apt ships old/vulnerable version)
+RUN apt-get update && apt-get install -y curl \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install GitHub MCP Server globally
-RUN npm install -g @modelcontextprotocol/server-github
+# Install GitHub MCP Server globally (latest to get patched @modelcontextprotocol/sdk)
+RUN npm install -g @modelcontextprotocol/server-github@latest
 # Create non-root user
 RUN useradd -m -u 1000 swarm && \
     chown -R swarm:swarm /app
@@ -69,3 +68,4 @@ RUN python -c "from mcp_core.algorithms import HippoRAGRetriever; print('Swarm v
 
 # Default command: Run MCP server
 CMD ["python", "server.py", "--sse"]
+
