@@ -1,7 +1,7 @@
 <div align="center">
   <img src="docs/images/swarm_logo.png" alt="Swarm Logo" width="200"/>
 
-  # Vexorbis Swarm v3.4
+  # Swarm Orchestrator v3.4
 
   ### Turn your IDE into an Autonomous Engineering Team
 
@@ -14,9 +14,9 @@
 
 ---
 
-## What is Vexorbis Swarm?
+## What is Swarm?
 
-**Vexorbis Swarm** is a Model Context Protocol (MCP) server that extends AI coding assistants like Antigravity, Cursor, and Claude Desktop with **deterministic, algorithmic capabilities**. Instead of relying purely on LLM reasoning, Vexorbis Swarm uses specialized workers—code analysis, fault localization, formal verification, and autonomous Git management—to deliver faster, more reliable results.
+**Swarm Orchestrator** is a Model Context Protocol (MCP) server that extends AI coding assistants like Antigravity, Cursor, and Claude Desktop with **deterministic, algorithmic capabilities**. Instead of relying purely on LLM reasoning, Vexorbis Swarm uses specialized workers—code analysis, fault localization, formal verification, and autonomous Git management—to deliver faster, more reliable results.
 
 ---
 
@@ -171,3 +171,4 @@ export SWARM_VERBOSE_TELEMETRY=true
 ## 📜 License
 
 MIT License - See [LICENSE](LICENSE) for details.
+
