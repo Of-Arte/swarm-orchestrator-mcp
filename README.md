@@ -1,4 +1,4 @@
-> **⚠️ DEPRECATED:** This project is no longer being updated.
+> **⚠️ DEPRECATED:** This project is no longer being updated. We are migrating away from MCP and integrating natively with agentic gateways such as OpenClaw or Hermes Agent.
 
 <div align="center">
   <img src="docs/images/swarm_logo.png" alt="Swarm Logo" width="200"/>
@@ -177,6 +177,7 @@ export SWARM_VERBOSE_TELEMETRY=true
 ## 📜 License
 
 MIT License - See [LICENSE](LICENSE) for details.
+
 
 
 
