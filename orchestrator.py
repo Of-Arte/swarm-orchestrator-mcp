@@ -1,5 +1,5 @@
 """
-Swarm v3.0 - Python-Native Orchestrator CLI
+Swarm v3.4 - Python-Native Orchestrator CLI
 
 A unified CLI for project management, validation, and semantic search.
 """
@@ -831,3 +831,4 @@ def check() -> None:
 
 if __name__ == "__main__":
     app()
+
