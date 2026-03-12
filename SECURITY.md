@@ -11,7 +11,7 @@
 
 ### Automated Code Execution
 
-Swarm v3.0 includes capabilities that execute code or commands:
+Swarm v3.4 includes capabilities that execute code or commands:
 
 - **`orchestrator.py debug` (SBFL)**: Runs the test command provided by the user (e.g., `pytest`). Ensure you trust the test suite of the project you are debugging.
 - **Toolchain Manager**: Can execute build/lint commands.
@@ -96,4 +96,5 @@ cosign verify ghcr.io/AGENTagony/swarm:latest
 ### Runtime Hardening
 
 See [Runtime Monitoring Guide](docs/security/runtime-monitoring.md) for Falco setup.
+
 
